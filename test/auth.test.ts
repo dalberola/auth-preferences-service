@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import request from "supertest";
+import mongoose from "mongoose";
 import type { Express } from "express";
 import { MongoMemoryServer } from "mongodb-memory-server";
 
@@ -11,13 +12,22 @@ vi.mock("../src/lib/mailer.js", () => ({
   }),
 }));
 
-let mongo: MongoMemoryServer;
+let mongo: MongoMemoryServer | undefined;
 let app: Express;
 
 beforeAll(async () => {
-  mongo = await MongoMemoryServer.create();
   const { connectDb } = await import("../src/db/connect.js");
-  await connectDb(mongo.getUri());
+  // In Docker/CI, point at a real Mongo (no binary download). Otherwise spin an
+  // in-memory server (host platforms that can fetch the matching binary).
+  const uri = process.env.MONGODB_TEST_URI;
+  if (uri) {
+    await connectDb(uri);
+  } else {
+    mongo = await MongoMemoryServer.create();
+    await connectDb(mongo.getUri());
+  }
+  await mongoose.connection.dropDatabase(); // repeatable against a persistent Mongo
+
   const { createApp } = await import("../src/app.js");
   app = createApp();
 });
@@ -25,7 +35,7 @@ beforeAll(async () => {
 afterAll(async () => {
   const { disconnectDb } = await import("../src/db/connect.js");
   await disconnectDb();
-  await mongo.stop();
+  await mongo?.stop();
 });
 
 const email = "user@example.com";

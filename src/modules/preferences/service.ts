@@ -25,7 +25,7 @@ export async function updatePreferences(
   const user = await User.findByIdAndUpdate(
     userId,
     { $set: update },
-    { new: true, select: "preferences" },
+    { returnDocument: "after", select: "preferences" },
   );
   if (!user) {
     throw unauthorized("USER_NOT_FOUND", "Account no longer exists");
