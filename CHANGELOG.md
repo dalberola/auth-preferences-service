@@ -9,6 +9,8 @@ All notable changes to this project are documented here. Format loosely follows
 _Track in-flight work via [issues](https://github.com/dalberola/auth-preferences-service/issues)
 and [milestones](https://github.com/dalberola/auth-preferences-service/milestones)._
 
+## [0.3.0] - 2026-06-24
+
 ### Changed
 - **BREAKING:** migrated persistence from MongoDB/Mongoose to **TypeORM 1.0 +
   MariaDB** ([#6](https://github.com/dalberola/auth-preferences-service/issues/6)).
@@ -56,5 +58,6 @@ Initial dev-ready baseline.
   and a guided AI onboarding flow.
 - CI via GitHub Actions (typecheck + lint + test against a Mongo service).
 
-[Unreleased]: https://github.com/dalberola/auth-preferences-service/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/dalberola/auth-preferences-service/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/dalberola/auth-preferences-service/compare/v0.1.0...v0.3.0
 [0.1.0]: https://github.com/dalberola/auth-preferences-service/releases/tag/v0.1.0
