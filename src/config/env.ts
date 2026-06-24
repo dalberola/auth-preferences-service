@@ -23,6 +23,8 @@ const schema = z.object({
   JWT_REFRESH_SECRET: z.string().min(32),
   ACCESS_TTL: z.string().default("15m"),
   REFRESH_TTL_DAYS: z.coerce.number().int().positive().default(14),
+  // How often the background reaper deletes expired tokens (MariaDB has no TTL).
+  REAP_INTERVAL_MINUTES: z.coerce.number().int().positive().default(60),
 
   SMTP_HOST: z.string().min(1),
   SMTP_PORT: z.coerce.number().int().positive().default(1025),
