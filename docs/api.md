@@ -7,7 +7,7 @@ Errors share the shape `{ "error": { "code": "...", "message": "..." } }`
 ## Conventions
 
 - **Access token**: `Authorization: Bearer <jwt>` header. Short-lived (`ACCESS_TTL`, default 15m).
-- **Refresh token**: httpOnly cookie `refresh_token`, scoped to `/auth`, sent automatically by browsers. Rotated on every refresh.
+- **Refresh token**: delivery depends on `REFRESH_TOKEN_TRANSPORT`. Default `cookie` — httpOnly cookie `refresh_token` scoped to `/auth`, sent automatically by browsers. `body` — returned in the login/refresh JSON (`refreshToken`, `refreshExpiresAt`) and sent back in the request body `{ "refreshToken": "…" }`. Rotated on every refresh. See [security.md](security.md).
 - **Rate limits**: `/auth/*` 20 req / 15 min; `/me/*` 100 req / 15 min (disabled under `NODE_ENV=test`).
 
 ---
