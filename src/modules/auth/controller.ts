@@ -1,9 +1,11 @@
 import type { CookieOptions, Request, Response } from "express";
 import { env } from "../../config/env.js";
 import {
+  forgotPasswordSchema,
   loginSchema,
   registerSchema,
   resendSchema,
+  resetPasswordSchema,
   verifyQuerySchema,
 } from "./validators.js";
 import * as auth from "./service.js";
@@ -75,4 +77,22 @@ export async function resendVerification(
   res.status(202).json({
     message: "If the email is valid and unverified, a new link has been sent.",
   });
+}
+
+export async function forgotPassword(
+  req: Request,
+  res: Response,
+): Promise<void> {
+  const { email } = forgotPasswordSchema.parse(req.body);
+  await auth.requestPasswordReset(email);
+  // Generic response regardless of whether the email exists.
+  res.status(202).json({
+    message: "If the email is valid, a password reset link has been sent.",
+  });
+}
+
+export async function resetPassword(req: Request, res: Response): Promise<void> {
+  const { token, password } = resetPasswordSchema.parse(req.body);
+  await auth.resetPassword(token, password);
+  res.status(204).end();
 }

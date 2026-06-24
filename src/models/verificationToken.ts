@@ -6,7 +6,7 @@ import {
   PrimaryGeneratedColumn,
 } from "typeorm";
 
-export type VerificationType = "email_verify";
+export type VerificationType = "email_verify" | "password_reset";
 
 @Entity({ name: "verification_tokens" })
 export class VerificationToken {

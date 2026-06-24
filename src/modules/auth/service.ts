@@ -7,11 +7,15 @@ import { RefreshToken } from "../../models/refreshToken.js";
 import { hashPassword, verifyPassword } from "../../lib/password.js";
 import { generateToken, hashToken, newId } from "../../lib/tokens.js";
 import { signAccessToken } from "../../lib/jwt.js";
-import { sendVerificationEmail } from "../../lib/mailer.js";
+import {
+  sendPasswordResetEmail,
+  sendVerificationEmail,
+} from "../../lib/mailer.js";
 import { forbidden, unauthorized } from "../../lib/errors.js";
 import type { LoginInput, RegisterInput } from "./validators.js";
 
 const VERIFY_TTL_MS = 24 * 60 * 60 * 1000;
+const PASSWORD_RESET_TTL_MS = 60 * 60 * 1000;
 const REFRESH_TTL_MS = () => env.REFRESH_TTL_DAYS * 24 * 60 * 60 * 1000;
 
 const users = () => AppDataSource.getRepository(User);
@@ -161,4 +165,53 @@ export async function resendVerification(rawEmail: string): Promise<void> {
   if (user && !user.emailVerified) {
     await issueVerification(user.id, email);
   }
+}
+
+/**
+ * Issue a password-reset token and email it. Always resolves the same way (the
+ * controller returns a generic 202) so it never reveals whether an email exists.
+ */
+export async function requestPasswordReset(rawEmail: string): Promise<void> {
+  const email = rawEmail.toLowerCase();
+  const user = await users().findOne({ where: { email } });
+  if (!user) return;
+
+  const { raw, hash } = generateToken();
+  const repo = verifications();
+  await repo.save(
+    repo.create({
+      userId: user.id,
+      tokenHash: hash,
+      type: "password_reset",
+      expiresAt: new Date(Date.now() + PASSWORD_RESET_TTL_MS),
+    }),
+  );
+  await sendPasswordResetEmail(email, raw);
+}
+
+export async function resetPassword(
+  rawToken: string,
+  newPassword: string,
+): Promise<void> {
+  const tokenHash = hashToken(rawToken);
+  const repo = verifications();
+  const record = await repo.findOne({
+    where: { tokenHash, type: "password_reset", consumedAt: IsNull() },
+  });
+
+  if (!record || record.expiresAt.getTime() < Date.now()) {
+    throw unauthorized("INVALID_TOKEN", "Invalid or expired reset link");
+  }
+
+  const passwordHash = await hashPassword(newPassword);
+  await users().update(record.userId, { passwordHash });
+
+  record.consumedAt = new Date();
+  await repo.save(record);
+
+  // A reset implies possible compromise: revoke every outstanding session.
+  await refreshTokens().update(
+    { userId: record.userId, revokedAt: IsNull() },
+    { revokedAt: new Date() },
+  );
 }

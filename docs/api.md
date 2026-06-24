@@ -84,6 +84,29 @@ Revokes the current refresh token and clears the cookie. Idempotent.
 Re-issues a verification link for an existing unverified account; no-op otherwise.
 Always generic (no enumeration). → `202`.
 
+## `POST /auth/forgot-password`
+
+```json
+{ "email": "user@example.com" }
+```
+
+Issues a single-use password-reset token (1h TTL) and emails a reset link to
+`${CLIENT_URL}/reset-password?token=…`. Always generic regardless of whether the
+account exists (no enumeration). → `202`.
+
+## `POST /auth/reset-password`
+
+```json
+{ "token": "<raw>", "password": "min-12-chars" }
+```
+
+Consumes the reset token, sets the new password (argon2id), and **revokes all of
+the user's refresh tokens** (every existing session must re-authenticate).
+
+→ `204`
+→ `401 INVALID_TOKEN` if missing/expired/already-consumed
+→ `400 VALIDATION_ERROR` if the new password is < 12 chars
+
 ## `GET /me/preferences`  *(auth required)*
 
 → `200 { "preferences": { "theme": "system", "locale": "en", "schemaVersion": 1, "settings": {} } }`
