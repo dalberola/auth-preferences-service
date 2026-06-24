@@ -137,6 +137,7 @@ curl -sX PUT localhost:4000/me/preferences \
 | Code | Status | Meaning |
 | --- | --- | --- |
 | `VALIDATION_ERROR` | 400 | Body/query failed Zod validation (`details` included) |
+| `MALFORMED_BODY` | 400 | Request body is not valid JSON |
 | `INVALID_CREDENTIALS` | 401 | Wrong email/password (generic) |
 | `EMAIL_NOT_VERIFIED` | 403 | Login blocked until verification |
 | `INVALID_TOKEN` | 401 | Bad/expired verification, access, or refresh token |

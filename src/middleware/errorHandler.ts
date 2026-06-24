@@ -11,6 +11,15 @@ export const errorHandler: ErrorRequestHandler = (err, _req, res, _next) => {
     return;
   }
 
+  // body-parser raises a SyntaxError (with a `body` property) for unparseable
+  // JSON — a client error, so map it to 400 rather than the 500 fallback.
+  if (err instanceof SyntaxError && "body" in err) {
+    res.status(400).json({
+      error: { code: "MALFORMED_BODY", message: "Request body is not valid JSON" },
+    });
+    return;
+  }
+
   if (err instanceof AppError) {
     res.status(err.status).json({
       error: { code: err.code, message: err.message },
