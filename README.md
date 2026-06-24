@@ -54,7 +54,15 @@ npm run build      # tsc -> dist/
 npm start          # node dist/server.js
 npm run typecheck  # tsc --noEmit
 npm run lint       # eslint
-npm test           # vitest (in-memory MongoDB, no Docker needed)
+npm test           # vitest; in-memory MongoDB on host (downloads a binary)
+```
+
+Inside a container (e.g. arm64, where the in-memory binary is unavailable),
+point the suite at a real Mongo instead — no download:
+
+```bash
+# with a mongo service reachable as `mongo`:
+MONGODB_TEST_URI=mongodb://mongo:27017/test npm test
 ```
 
 ## Layout
