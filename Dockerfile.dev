@@ -1,0 +1,17 @@
+# Development image: native deps (argon2) build cleanly on the glibc slim base.
+FROM node:24-slim
+
+WORKDIR /app
+
+# Toolchain for native modules (argon2) in case a prebuilt binary is unavailable.
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends python3 make g++ \
+  && rm -rf /var/lib/apt/lists/*
+
+COPY package.json ./
+RUN npm install
+
+COPY . .
+
+EXPOSE 4000
+CMD ["npm", "run", "dev"]

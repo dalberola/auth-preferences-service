@@ -1,0 +1,38 @@
+import { createTransport, type Transporter } from "nodemailer";
+import { env } from "../config/env.js";
+import { logger } from "./logger.js";
+
+function buildTransport(): Transporter {
+  // Tests never touch the network: jsonTransport just serialises the message.
+  if (env.NODE_ENV === "test") {
+    return createTransport({ jsonTransport: true });
+  }
+  return createTransport({
+    host: env.SMTP_HOST,
+    port: env.SMTP_PORT,
+    secure: false,
+    auth: env.SMTP_USER
+      ? { user: env.SMTP_USER, pass: env.SMTP_PASS }
+      : undefined,
+  });
+}
+
+const transport = buildTransport();
+
+export async function sendVerificationEmail(
+  to: string,
+  rawToken: string,
+): Promise<void> {
+  const link = `${env.APP_URL}/auth/verify?token=${rawToken}`;
+  await transport.sendMail({
+    from: env.MAIL_FROM,
+    to,
+    subject: "Verify your email address",
+    text: `Welcome! Confirm your email by opening this link:\n\n${link}\n\nThis link expires in 24 hours.`,
+    html:
+      `<p>Welcome! Confirm your email by clicking the link below:</p>` +
+      `<p><a href="${link}">Verify my email</a></p>` +
+      `<p>This link expires in 24 hours.</p>`,
+  });
+  logger.info({ to }, "verification email dispatched");
+}

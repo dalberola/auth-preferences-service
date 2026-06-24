@@ -1,0 +1,40 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    env_file: .env
+    environment:
+      # Overrides point the app at the compose-network services regardless of .env.
+      MONGODB_URI: mongodb://mongo:27017/auth_preferences
+      SMTP_HOST: mailpit
+      SMTP_PORT: "1025"
+    ports:
+      - "4000:4000"
+    volumes:
+      - ./:/app
+      # Anonymous volume keeps the container's built node_modules (incl. native argon2).
+      - /app/node_modules
+    depends_on:
+      mongo:
+        condition: service_started
+      mailpit:
+        condition: service_started
+
+  mongo:
+    image: mongo:8
+    restart: unless-stopped
+    volumes:
+      - mongo_data:/data/db
+    ports:
+      - "27017:27017"
+
+  mailpit:
+    image: axllent/mailpit:latest
+    restart: unless-stopped
+    ports:
+      - "8025:8025" # web UI: http://localhost:8025
+      - "1025:1025" # SMTP
+
+volumes:
+  mongo_data:
