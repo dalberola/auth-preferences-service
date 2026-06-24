@@ -62,10 +62,14 @@ which is fine at this scale. The default object is set in code on insert
 
 ## Token reaping
 
-MariaDB has **no TTL index** (a MongoDB feature). Expiry is enforced in
-application code (`expiresAt < now` checks), so correctness is unaffected, but
-expired/consumed/revoked rows are **not auto-reaped**. A cleanup job is tracked in
-[#7](https://github.com/dalberola/auth-preferences-service/issues/7).
+MariaDB has **no TTL index** (a MongoDB feature), so a background reaper
+(`src/db/reaper.ts`) deletes rows where `expiresAt < now`. It is started in
+`server.ts` and runs once on boot, then every `REAP_INTERVAL_MINUTES` (default
+60). Reaping is keyed on **expiry only**: a revoked-but-unexpired refresh token is
+kept on purpose, so a replay is still detected as reuse and burns its family
+(deleting it early would weaken reuse detection to a plain invalid-token). Expiry
+is independently enforced in application code, so the reaper is hygiene, not
+correctness.
 
 ## Schema management
 

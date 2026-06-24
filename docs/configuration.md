@@ -31,6 +31,7 @@ docker-compose loads both files, each optional, `.env.local` last.
 | `JWT_REFRESH_SECRET` | **yes** | — | ≥ 32 chars; **different** from access |
 | `ACCESS_TTL` | no | `15m` | zeit/ms format for the access JWT |
 | `REFRESH_TTL_DAYS` | no | `14` | refresh-token lifetime in days |
+| `REAP_INTERVAL_MINUTES` | no | `60` | how often the reaper deletes expired tokens |
 | `SMTP_HOST` | **yes** | — | `mailpit` in compose |
 | `SMTP_PORT` | no | `1025` | Mailpit SMTP port |
 | `SMTP_USER` | no | — | omit for Mailpit (no auth) |

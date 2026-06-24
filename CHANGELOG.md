@@ -19,10 +19,12 @@ and [milestones](https://github.com/dalberola/auth-preferences-service/milestone
   runs against a real MariaDB (the `mongodb-memory-server` dependency and its
   arm64 binary gotcha are gone).
 
-### Known limitations
-- Expired tokens are no longer auto-reaped (MariaDB has no TTL index); expiry is
-  still enforced in code. Cleanup job tracked in
-  [#7](https://github.com/dalberola/auth-preferences-service/issues/7).
+### Added
+- Background **token reaper** (`src/db/reaper.ts`) deleting expired refresh and
+  verification tokens on an interval (`REAP_INTERVAL_MINUTES`, default 60),
+  replacing MongoDB's TTL index ([#7](https://github.com/dalberola/auth-preferences-service/issues/7)).
+  Reaps by expiry only, so revoked-but-unexpired refresh tokens are retained for
+  reuse detection.
 
 ## [0.1.0] - 2026-06-24
 

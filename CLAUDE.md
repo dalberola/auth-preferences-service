@@ -51,6 +51,7 @@ src/
   config/env.ts        zod-validated env; loads .env.local then .env; exits on invalid config
   db/data-source.ts    TypeORM DataSource (explicit entity list, NO globs); imports reflect-metadata
   db/connect.ts        DataSource.initialize() WITH retry/backoff
+  db/reaper.ts         interval reaper deleting expired tokens (replaces Mongo TTL)
   models/              User (preferences JSON) · VerificationToken · RefreshToken — TypeORM entities
   lib/                 password(argon2) · tokens(crypto) · jwt · mailer · logger · errors
   middleware/          requireAuth · errorHandler · rateLimit

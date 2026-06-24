@@ -245,3 +245,52 @@ describe("validation", () => {
     expect(res.body.error.code).toBe("INVALID_TOKEN");
   });
 });
+
+describe("token reaper", () => {
+  it("deletes expired tokens but keeps live and revoked-unexpired ones", async () => {
+    const { AppDataSource } = await import("../src/db/data-source.js");
+    const { reapExpiredTokens } = await import("../src/db/reaper.js");
+    const { RefreshToken } = await import("../src/models/refreshToken.js");
+    const { VerificationToken } = await import("../src/models/verificationToken.js");
+
+    const rt = AppDataSource.getRepository(RefreshToken);
+    const vt = AppDataSource.getRepository(VerificationToken);
+    const uid = "00000000-0000-4000-8000-000000000001";
+    const past = new Date(Date.now() - 60_000);
+    const future = new Date(Date.now() + 60 * 60_000);
+    const tag = `reap-${Date.now()}`;
+
+    const expiredR = await rt.save(
+      rt.create({ userId: uid, tokenHash: `${tag}-r-exp`, family: uid, expiresAt: past }),
+    );
+    // Revoked but NOT expired — must survive so reuse detection still works.
+    const revokedFreshR = await rt.save(
+      rt.create({
+        userId: uid,
+        tokenHash: `${tag}-r-rev`,
+        family: uid,
+        expiresAt: future,
+        revokedAt: new Date(),
+      }),
+    );
+    const liveR = await rt.save(
+      rt.create({ userId: uid, tokenHash: `${tag}-r-live`, family: uid, expiresAt: future }),
+    );
+    const expiredV = await vt.save(
+      vt.create({ userId: uid, tokenHash: `${tag}-v-exp`, type: "email_verify", expiresAt: past }),
+    );
+    const liveV = await vt.save(
+      vt.create({ userId: uid, tokenHash: `${tag}-v-live`, type: "email_verify", expiresAt: future }),
+    );
+
+    const result = await reapExpiredTokens();
+    expect(result.refreshTokens).toBeGreaterThanOrEqual(1);
+    expect(result.verificationTokens).toBeGreaterThanOrEqual(1);
+
+    expect(await rt.findOneBy({ id: expiredR.id })).toBeNull();
+    expect(await rt.findOneBy({ id: revokedFreshR.id })).not.toBeNull();
+    expect(await rt.findOneBy({ id: liveR.id })).not.toBeNull();
+    expect(await vt.findOneBy({ id: expiredV.id })).toBeNull();
+    expect(await vt.findOneBy({ id: liveV.id })).not.toBeNull();
+  });
+});
