@@ -22,7 +22,7 @@ by AI agents authorized to operate these tools).
 - **Milestones are versions** (e.g. `v0.2.0`, `v1.0.0`). An issue without a target
   version stays unmilestoned (backlog).
 - **CI must be green** before merging to `main`. The pipeline runs
-  `typecheck → lint → test` against a MongoDB service container.
+  `typecheck → lint → test` against a MariaDB service container.
 - **Releases**: bump the version, move `CHANGELOG [Unreleased]` into a dated
   section, tag `vX.Y.Z`, and publish a GitHub release. Close the milestone.
 - **Closing the loop**: when work lands, reference and close its issue (e.g.

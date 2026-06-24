@@ -1,6 +1,6 @@
-Open a mongosh shell (or run a one-off query) against the dev MongoDB.
+Open a `mariadb` shell (or run a one-off query) against the dev MariaDB.
 
-Optional argument: a JS expression to evaluate non-interactively. If empty, print
+Optional argument: a SQL statement to evaluate non-interactively. If empty, print
 how to open an interactive shell.
 
 Query: $ARGUMENTS
@@ -11,17 +11,17 @@ The dev database is `auth_preferences` (set by docker-compose).
 
 - One-off query (argument given):
   ```bash
-  docker compose exec -T mongo mongosh auth_preferences --quiet --eval '<expr>'
+  docker compose exec -T mariadb mariadb -uroot -proot auth_preferences -e "<SQL>"
   ```
   Examples:
-  - count users → `db.users.countDocuments()`
-  - inspect a user → `db.users.findOne({email:"user@example.com"})`
-  - list refresh tokens → `db.refreshtokens.find().toArray()`
-  - show indexes → `db.users.getIndexes()`
+  - count users → `SELECT COUNT(*) FROM users;`
+  - inspect a user → `SELECT * FROM users WHERE email='user@example.com'\G`
+  - list refresh tokens → `SELECT * FROM refresh_tokens;`
+  - show table schema → `SHOW CREATE TABLE users\G`
 
 - Interactive shell (no argument):
   ```bash
-  docker compose exec mongo mongosh auth_preferences
+  docker compose exec mariadb mariadb -uroot -proot auth_preferences
   ```
 
 Reminder: tokens are stored as sha256 hashes, so you cannot read raw token values

@@ -1,3 +1,4 @@
+import "reflect-metadata";
 import { createApp } from "./app.js";
 import { connectDb } from "./db/connect.js";
 import { env } from "./config/env.js";

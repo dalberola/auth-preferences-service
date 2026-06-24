@@ -5,8 +5,8 @@ show the latest run on `main`.
 
 Target: $ARGUMENTS
 
-CI is `.github/workflows/ci.yml`: `typecheck → lint → test` against a MongoDB
-service container (tests use `MONGODB_TEST_URI`). It runs on pushes and PRs to
+CI is `.github/workflows/ci.yml`: `typecheck → lint → test` against a MariaDB
+service container (tests use the `DB_*` env vars). It runs on pushes and PRs to
 `main`.
 
 ## Steps

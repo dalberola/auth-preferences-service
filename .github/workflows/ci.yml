@@ -11,19 +11,26 @@ jobs:
     runs-on: ubuntu-latest
 
     services:
-      mongo:
-        image: mongo:8
+      mariadb:
+        image: mariadb:11
         ports:
-          - 27017:27017
+          - 3306:3306
+        env:
+          MARIADB_ROOT_PASSWORD: root
+          MARIADB_DATABASE: auth_preferences_test
         options: >-
-          --health-cmd "mongosh --quiet --eval 'db.adminCommand({ping:1}).ok'"
+          --health-cmd "healthcheck.sh --connect --innodb_initialized"
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
 
     env:
-      # Test harness uses a real Mongo when this is set (no in-memory download).
-      MONGODB_TEST_URI: mongodb://localhost:27017/test
+      # Test harness connects to the MariaDB service container.
+      DB_HOST: 127.0.0.1
+      DB_PORT: "3306"
+      DB_USER: root
+      DB_PASSWORD: root
+      DB_NAME: auth_preferences_test
 
     steps:
       - uses: actions/checkout@v4

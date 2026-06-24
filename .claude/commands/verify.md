@@ -1,7 +1,7 @@
 Run the full verification gate: typecheck + lint + tests. Use before calling any
 change done.
 
-Optional argument: `host` (default, if Node is available locally) or `docker`.
+No argument.
 
 Mode: $ARGUMENTS
 
@@ -12,18 +12,15 @@ keeps the tree at 0 problems. Tests prove the end-to-end flow.
 
 ## Steps
 
-- **host** (macOS, in-memory Mongo auto-downloaded):
-  ```bash
-  npm run typecheck && npm run lint && npm test
-  ```
+Tests always run against a real MariaDB. Ensure the compose stack is up (`/dev`);
+`test/setup.ts` defaults `DB_*` to that stack (`127.0.0.1:3306`, `root`/`root`,
+database `auth_preferences_test`), so the bare gate works:
 
-- **docker** (arm64 Linux can't fetch the in-memory binary — use the compose Mongo).
-  Ensure the stack is up (`/dev`), then:
-  ```bash
-  docker run --rm --network auth-preferences-service_default \
-    -e MONGODB_TEST_URI=mongodb://mongo:27017/test \
-    -v "$PWD":/app -w /app node:24-slim \
-    sh -c "npm install && npm run typecheck && npm run lint && npm test"
-  ```
+```bash
+npm run typecheck && npm run lint && npm test
+```
+
+If your MariaDB differs, export the overrides first (so they reach `npm test`,
+not just the first command): `export DB_HOST=… DB_PORT=… DB_USER=… DB_PASSWORD=…`.
 
 Report each stage's result. All three must pass.

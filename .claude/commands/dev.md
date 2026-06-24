@@ -1,4 +1,4 @@
-Start (or restart) the local Docker dev stack: app + mongo + mailpit.
+Start (or restart) the local Docker dev stack: app + mariadb + mailpit.
 
 Optional argument: `up` (default), `down`, `restart`, or `rebuild`.
 
@@ -20,4 +20,4 @@ Action: $ARGUMENTS
 
 Note: a green `docker compose ps` does NOT prove the server is listening — `tsx
 watch` keeps the container Up even if startup failed. Always confirm via `/health`.
-If Mongo is `Restarting`, run `/logs` to diagnose (often a full Docker disk).
+If `mariadb` is unhealthy, run `/logs` to diagnose (often a full Docker disk).

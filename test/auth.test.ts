@@ -1,8 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import request from "supertest";
-import mongoose from "mongoose";
+import mysql from "mysql2/promise";
 import type { Express } from "express";
-import { MongoMemoryServer } from "mongodb-memory-server";
 
 // Capture the raw verification token instead of sending a real email.
 const captured = vi.hoisted(() => ({ token: "" }));
@@ -12,21 +11,24 @@ vi.mock("../src/lib/mailer.js", () => ({
   }),
 }));
 
-let mongo: MongoMemoryServer | undefined;
 let app: Express;
 
 beforeAll(async () => {
+  // TypeORM connects to an existing database; create the test DB if absent.
+  // The DataSource then drops/recreates the schema (NODE_ENV=test) for a clean run.
+  const admin = await mysql.createConnection({
+    host: process.env.DB_HOST,
+    port: Number(process.env.DB_PORT),
+    user: process.env.DB_USER,
+    password: process.env.DB_PASSWORD,
+  });
+  await admin.query(
+    `CREATE DATABASE IF NOT EXISTS \`${process.env.DB_NAME}\``,
+  );
+  await admin.end();
+
   const { connectDb } = await import("../src/db/connect.js");
-  // In Docker/CI, point at a real Mongo (no binary download). Otherwise spin an
-  // in-memory server (host platforms that can fetch the matching binary).
-  const uri = process.env.MONGODB_TEST_URI;
-  if (uri) {
-    await connectDb(uri);
-  } else {
-    mongo = await MongoMemoryServer.create();
-    await connectDb(mongo.getUri());
-  }
-  await mongoose.connection.dropDatabase(); // repeatable against a persistent Mongo
+  await connectDb();
 
   const { createApp } = await import("../src/app.js");
   app = createApp();
@@ -35,7 +37,6 @@ beforeAll(async () => {
 afterAll(async () => {
   const { disconnectDb } = await import("../src/db/connect.js");
   await disconnectDb();
-  await mongo?.stop();
 });
 
 const email = "user@example.com";

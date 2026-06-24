@@ -5,7 +5,7 @@
 Standalone **registration + email-verification + user-preferences** API. No
 frontend; intentionally decoupled from any consumer.
 
-**Stack:** Node 24 · TypeScript 6 · Express 5 · MongoDB 8 / Mongoose 9 · JWT
+**Stack:** Node 24 · TypeScript 6 · Express 5 · MariaDB 11 / TypeORM 1.0 · JWT
 (access + rotating refresh) · Nodemailer · Zod 4 · Vitest 4. ESM throughout. Dev
 runs entirely in Docker.
 
@@ -24,7 +24,7 @@ docker compose up --build
 | --- | --- | --- |
 | API | http://localhost:4000 | the service (`GET /health`) |
 | Mailpit | http://localhost:8025 | inbox that catches verification emails |
-| MongoDB | mongodb://localhost:27017 | data store |
+| MariaDB | localhost:3306 | data store |
 
 The app hot-reloads via `tsx watch` on the bind-mounted source. Verification
 emails are caught by Mailpit — open the UI and click the link (or use `/mailpit`).
@@ -70,8 +70,8 @@ npm test           # vitest
 ```
 
 **Verify any change** before calling it done: `npm run typecheck && npm run lint
-&& npm test` (the `/verify` skill wraps this). On arm64 Linux containers, tests
-need a real Mongo via `MONGODB_TEST_URI` — see [docs/development.md](docs/development.md).
+&& npm test` (the `/verify` skill wraps this). Tests always run against a real
+MariaDB — see [docs/development.md](docs/development.md).
 
 ## Claude Code skills
 
@@ -84,7 +84,8 @@ Project-scoped workflows live in [.claude/commands/](.claude/commands/):
 ```
 src/
   config/env.ts        zod-validated env (loads .env.local then .env)
-  db/connect.ts        mongoose connection with retry/backoff
+  db/connect.ts        TypeORM DataSource initialize() with retry/backoff
+  db/data-source.ts    TypeORM DataSource (explicit entity list, reflect-metadata)
   models/              User (preferences embedded) · VerificationToken · RefreshToken
   lib/                 password · tokens · jwt · mailer · logger · errors
   middleware/          requireAuth · errorHandler · rateLimit
