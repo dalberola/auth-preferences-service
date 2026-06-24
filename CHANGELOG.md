@@ -20,6 +20,11 @@ and [milestones](https://github.com/dalberola/auth-preferences-service/milestone
   arm64 binary gotcha are gone).
 
 ### Added
+- **Configurable refresh-token transport** (`REFRESH_TOKEN_TRANSPORT`,
+  [#2](https://github.com/dalberola/auth-preferences-service/issues/2)): keep the
+  default httpOnly `cookie`, or switch to `body` so cross-origin / browser-extension
+  clients receive the refresh token in the JSON response and send it back in the
+  request body. Trade-offs documented in `docs/security.md`.
 - **Password reset** flow ([#1](https://github.com/dalberola/auth-preferences-service/issues/1)):
   `POST /auth/forgot-password` (generic 202, no enumeration) issues a single-use
   reset token (1h TTL) emailed to the client; `POST /auth/reset-password` sets the

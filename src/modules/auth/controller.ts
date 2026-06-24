@@ -26,6 +26,31 @@ function setRefreshCookie(res: Response, token: string, expires: Date): void {
   res.cookie(REFRESH_COOKIE, token, refreshCookieOptions(expires));
 }
 
+// Switch point for the refresh-token transport (see docs/security.md). In
+// `cookie` mode it rides an httpOnly cookie; in `body` mode it travels in the
+// JSON body so cross-origin / extension clients can store it themselves.
+function deliverSession(res: Response, tokens: auth.IssuedTokens): void {
+  if (env.REFRESH_TOKEN_TRANSPORT === "cookie") {
+    setRefreshCookie(res, tokens.refreshToken, tokens.refreshExpiresAt);
+    res.json({ accessToken: tokens.accessToken });
+    return;
+  }
+  res.json({
+    accessToken: tokens.accessToken,
+    refreshToken: tokens.refreshToken,
+    refreshExpiresAt: tokens.refreshExpiresAt,
+  });
+}
+
+function readRefreshToken(req: Request): string | undefined {
+  if (env.REFRESH_TOKEN_TRANSPORT === "cookie") {
+    return req.cookies?.[REFRESH_COOKIE] as string | undefined;
+  }
+  const fromBody = (req.body as { refreshToken?: unknown } | undefined)
+    ?.refreshToken;
+  return typeof fromBody === "string" ? fromBody : undefined;
+}
+
 export async function register(req: Request, res: Response): Promise<void> {
   const input = registerSchema.parse(req.body);
   await auth.register(input);
@@ -44,12 +69,11 @@ export async function verify(req: Request, res: Response): Promise<void> {
 export async function login(req: Request, res: Response): Promise<void> {
   const input = loginSchema.parse(req.body);
   const tokens = await auth.login(input);
-  setRefreshCookie(res, tokens.refreshToken, tokens.refreshExpiresAt);
-  res.json({ accessToken: tokens.accessToken });
+  deliverSession(res, tokens);
 }
 
 export async function refresh(req: Request, res: Response): Promise<void> {
-  const current = req.cookies?.[REFRESH_COOKIE] as string | undefined;
+  const current = readRefreshToken(req);
   if (!current) {
     res.status(401).json({
       error: { code: "NO_TOKEN", message: "Missing refresh token" },
@@ -57,14 +81,15 @@ export async function refresh(req: Request, res: Response): Promise<void> {
     return;
   }
   const tokens = await auth.refresh(current);
-  setRefreshCookie(res, tokens.refreshToken, tokens.refreshExpiresAt);
-  res.json({ accessToken: tokens.accessToken });
+  deliverSession(res, tokens);
 }
 
 export async function logout(req: Request, res: Response): Promise<void> {
-  const current = req.cookies?.[REFRESH_COOKIE] as string | undefined;
+  const current = readRefreshToken(req);
   await auth.logout(current);
-  res.clearCookie(REFRESH_COOKIE, { path: "/auth" });
+  if (env.REFRESH_TOKEN_TRANSPORT === "cookie") {
+    res.clearCookie(REFRESH_COOKIE, { path: "/auth" });
+  }
   res.status(204).end();
 }
 

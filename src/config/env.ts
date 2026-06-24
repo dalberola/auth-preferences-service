@@ -25,6 +25,9 @@ const schema = z.object({
   REFRESH_TTL_DAYS: z.coerce.number().int().positive().default(14),
   // How often the background reaper deletes expired tokens (MariaDB has no TTL).
   REAP_INTERVAL_MINUTES: z.coerce.number().int().positive().default(60),
+  // How the refresh token reaches the client: httpOnly cookie (same-origin web,
+  // default) or the JSON response body (cross-origin / browser-extension clients).
+  REFRESH_TOKEN_TRANSPORT: z.enum(["cookie", "body"]).default("cookie"),
 
   SMTP_HOST: z.string().min(1),
   SMTP_PORT: z.coerce.number().int().positive().default(1025),
