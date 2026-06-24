@@ -1,0 +1,124 @@
+# API reference
+
+Base URL (dev): `http://localhost:4000`. All request/response bodies are JSON.
+Errors share the shape `{ "error": { "code": "...", "message": "..." } }`
+(validation errors add `details`).
+
+## Conventions
+
+- **Access token**: `Authorization: Bearer <jwt>` header. Short-lived (`ACCESS_TTL`, default 15m).
+- **Refresh token**: httpOnly cookie `refresh_token`, scoped to `/auth`, sent automatically by browsers. Rotated on every refresh.
+- **Rate limits**: `/auth/*` 20 req / 15 min; `/me/*` 100 req / 15 min (disabled under `NODE_ENV=test`).
+
+---
+
+## `GET /health`
+
+Liveness probe. → `200 { "status": "ok" }`.
+
+## `POST /auth/register`
+
+```json
+{ "email": "user@example.com", "password": "min-12-chars" }
+```
+
+Creates an unverified account and emails a verification link. Always returns the
+same generic response regardless of whether the email already exists (no
+enumeration). Password must be ≥ 12 characters.
+
+→ `202 { "message": "If the email is valid, a verification link has been sent." }`
+
+```bash
+curl -sX POST localhost:4000/auth/register \
+  -H 'content-type: application/json' \
+  -d '{"email":"user@example.com","password":"Sup3rSecret!pw"}'
+```
+
+## `GET /auth/verify?token=<raw>`
+
+Consumes a verification token (single-use, 24h TTL) and marks the email verified.
+
+→ `302` redirect to `${CLIENT_URL}/?verified=1`
+→ `401 INVALID_TOKEN` if missing/expired/already-consumed
+
+## `POST /auth/login`
+
+```json
+{ "email": "user@example.com", "password": "..." }
+```
+
+→ `200 { "accessToken": "<jwt>" }` + `Set-Cookie: refresh_token=…`
+→ `401 INVALID_CREDENTIALS` · `403 EMAIL_NOT_VERIFIED`
+
+```bash
+curl -sX POST localhost:4000/auth/login -c cookies.txt \
+  -H 'content-type: application/json' \
+  -d '{"email":"user@example.com","password":"Sup3rSecret!pw"}'
+```
+
+## `POST /auth/refresh`
+
+Sends the `refresh_token` cookie; rotates it and returns a fresh access token.
+Replaying an already-rotated token triggers `TOKEN_REUSE` and revokes the whole
+token family.
+
+→ `200 { "accessToken": "<jwt>" }` + rotated cookie
+→ `401 NO_TOKEN | INVALID_TOKEN | TOKEN_REUSE`
+
+```bash
+curl -sX POST localhost:4000/auth/refresh -b cookies.txt -c cookies.txt
+```
+
+## `POST /auth/logout`
+
+Revokes the current refresh token and clears the cookie. Idempotent.
+
+→ `204`
+
+## `POST /auth/resend-verification`
+
+```json
+{ "email": "user@example.com" }
+```
+
+Re-issues a verification link for an existing unverified account; no-op otherwise.
+Always generic (no enumeration). → `202`.
+
+## `GET /me/preferences`  *(auth required)*
+
+→ `200 { "preferences": { "theme": "system", "locale": "en", "schemaVersion": 1, "settings": {} } }`
+
+```bash
+curl -s localhost:4000/me/preferences -H "authorization: Bearer $ACCESS"
+```
+
+## `PUT /me/preferences`  *(auth required)*
+
+Partial update — only supplied keys change. Unknown top-level keys are rejected
+(`strict` schema).
+
+```json
+{ "theme": "dark", "locale": "en", "settings": { "anyKey": "anyJsonValue" } }
+```
+
+→ `200 { "preferences": { … } }`
+
+```bash
+curl -sX PUT localhost:4000/me/preferences \
+  -H "authorization: Bearer $ACCESS" -H 'content-type: application/json' \
+  -d '{"theme":"dark","settings":{"widgetA":true}}'
+```
+
+## Error codes
+
+| Code | Status | Meaning |
+| --- | --- | --- |
+| `VALIDATION_ERROR` | 400 | Body/query failed Zod validation (`details` included) |
+| `INVALID_CREDENTIALS` | 401 | Wrong email/password (generic) |
+| `EMAIL_NOT_VERIFIED` | 403 | Login blocked until verification |
+| `INVALID_TOKEN` | 401 | Bad/expired verification, access, or refresh token |
+| `NO_TOKEN` | 401 | Missing bearer or refresh token |
+| `TOKEN_REUSE` | 401 | Rotated refresh token replayed; family revoked |
+| `USER_NOT_FOUND` | 401 | Authenticated user no longer exists |
+| `RATE_LIMITED` | 429 | Too many requests |
+| `INTERNAL` | 500 | Unhandled error |
