@@ -35,6 +35,10 @@ and [milestones](https://github.com/dalberola/auth-preferences-service/milestone
   Reaps by expiry only, so revoked-but-unexpired refresh tokens are retained for
   reuse detection.
 
+### Fixed
+- Malformed JSON request bodies now return `400 MALFORMED_BODY` instead of a
+  generic `500` ([#13](https://github.com/dalberola/auth-preferences-service/issues/13)).
+
 ## [0.1.0] - 2026-06-24
 
 Initial dev-ready baseline.

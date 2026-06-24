@@ -247,6 +247,15 @@ describe("validation", () => {
       .expect(401);
     expect(res.body.error.code).toBe("INVALID_TOKEN");
   });
+
+  it("rejects a malformed JSON body with 400 MALFORMED_BODY", async () => {
+    const res = await request(app)
+      .post("/auth/login")
+      .set("Content-Type", "application/json")
+      .send('{"email": "x@example.com"') // truncated, unparseable
+      .expect(400);
+    expect(res.body.error.code).toBe("MALFORMED_BODY");
+  });
 });
 
 describe("password reset", () => {
