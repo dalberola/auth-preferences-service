@@ -3,7 +3,12 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.dev
-    env_file: .env
+    # Both optional; later file wins, so .env.local overrides .env.
+    env_file:
+      - path: .env
+        required: false
+      - path: .env.local
+        required: false
     environment:
       # Overrides point the app at the compose-network services regardless of .env.
       MONGODB_URI: mongodb://mongo:27017/auth_preferences

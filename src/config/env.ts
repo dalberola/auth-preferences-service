@@ -1,5 +1,11 @@
-import "dotenv/config";
+import { config as loadEnv } from "dotenv";
 import { z } from "zod";
+
+// Precedence: real process.env (e.g. docker-compose) > .env.local > .env.
+// dotenv never overrides an already-set key, so loading .env.local first
+// gives it priority, and .env only fills in whatever is still missing.
+loadEnv({ path: ".env.local" });
+loadEnv({ path: ".env" });
 
 const schema = z.object({
   NODE_ENV: z

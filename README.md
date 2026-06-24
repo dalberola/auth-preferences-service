@@ -7,9 +7,13 @@ Standalone registration + email-verification + user-preferences API.
 ## Quick start (Docker)
 
 ```bash
-cp .env.example .env          # then set JWT_ACCESS_SECRET / JWT_REFRESH_SECRET
+cp .env.example .env.local    # then set JWT_ACCESS_SECRET / JWT_REFRESH_SECRET
 docker compose up --build
 ```
+
+Config is loaded with precedence **`process.env` > `.env.local` > `.env`**, both
+files optional. Put real secrets in `.env.local` (git-ignored, never committed);
+`.env` is for shared, non-secret defaults if you want them.
 
 Services:
 
