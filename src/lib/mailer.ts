@@ -36,3 +36,22 @@ export async function sendVerificationEmail(
   });
   logger.info({ to }, "verification email dispatched");
 }
+
+export async function sendPasswordResetEmail(
+  to: string,
+  rawToken: string,
+): Promise<void> {
+  // The client collects the new password and POSTs it to /auth/reset-password.
+  const link = `${env.CLIENT_URL}/reset-password?token=${rawToken}`;
+  await transport.sendMail({
+    from: env.MAIL_FROM,
+    to,
+    subject: "Reset your password",
+    text: `Reset your password by opening this link:\n\n${link}\n\nThis link expires in 1 hour. If you did not request this, ignore this email.`,
+    html:
+      `<p>Reset your password by clicking the link below:</p>` +
+      `<p><a href="${link}">Reset my password</a></p>` +
+      `<p>This link expires in 1 hour. If you did not request this, ignore this email.</p>`,
+  });
+  logger.info({ to }, "password reset email dispatched");
+}

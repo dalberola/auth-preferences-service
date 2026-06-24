@@ -20,6 +20,10 @@ and [milestones](https://github.com/dalberola/auth-preferences-service/milestone
   arm64 binary gotcha are gone).
 
 ### Added
+- **Password reset** flow ([#1](https://github.com/dalberola/auth-preferences-service/issues/1)):
+  `POST /auth/forgot-password` (generic 202, no enumeration) issues a single-use
+  reset token (1h TTL) emailed to the client; `POST /auth/reset-password` sets the
+  new password and revokes all of the user's refresh tokens (forces re-login).
 - Background **token reaper** (`src/db/reaper.ts`) deleting expired refresh and
   verification tokens on an interval (`REAP_INTERVAL_MINUTES`, default 60),
   replacing MongoDB's TTL index ([#7](https://github.com/dalberola/auth-preferences-service/issues/7)).

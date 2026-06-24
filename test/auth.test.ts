@@ -3,11 +3,14 @@ import request from "supertest";
 import mysql from "mysql2/promise";
 import type { Express } from "express";
 
-// Capture the raw verification token instead of sending a real email.
-const captured = vi.hoisted(() => ({ token: "" }));
+// Capture the raw tokens instead of sending real emails.
+const captured = vi.hoisted(() => ({ token: "", resetToken: "" }));
 vi.mock("../src/lib/mailer.js", () => ({
   sendVerificationEmail: vi.fn(async (_to: string, raw: string) => {
     captured.token = raw;
+  }),
+  sendPasswordResetEmail: vi.fn(async (_to: string, raw: string) => {
+    captured.resetToken = raw;
   }),
 }));
 
@@ -243,6 +246,75 @@ describe("validation", () => {
       .set("Authorization", "Bearer not.a.real.jwt")
       .expect(401);
     expect(res.body.error.code).toBe("INVALID_TOKEN");
+  });
+});
+
+describe("password reset", () => {
+  it("forgot-password returns 202 whether or not the account exists", async () => {
+    // Unknown account: still 202 (no enumeration).
+    await request(app)
+      .post("/auth/forgot-password")
+      .send({ email: "ghost@example.com" })
+      .expect(202);
+
+    const addr = "resetme@example.com";
+    await registerAndVerify(addr);
+    await request(app)
+      .post("/auth/forgot-password")
+      .send({ email: addr })
+      .expect(202);
+    expect(captured.resetToken).not.toBe("");
+  });
+
+  it("resets the password, revokes sessions, and is single-use", async () => {
+    const addr = "resetflow@example.com";
+    await registerAndVerify(addr);
+    const { refreshToken: r1 } = await loginTokens(addr);
+
+    await request(app)
+      .post("/auth/forgot-password")
+      .send({ email: addr })
+      .expect(202);
+    const resetToken = captured.resetToken;
+    expect(resetToken).toBeTruthy();
+
+    const newPassword = "Even-Str0nger!pw";
+    await request(app)
+      .post("/auth/reset-password")
+      .send({ token: resetToken, password: newPassword })
+      .expect(204);
+
+    // Old password is dead, new one works.
+    await request(app).post("/auth/login").send({ email: addr, password }).expect(401);
+    await request(app)
+      .post("/auth/login")
+      .send({ email: addr, password: newPassword })
+      .expect(200);
+
+    // Pre-reset session was revoked.
+    await sendRefresh(r1).expect(401);
+
+    // The reset link is single-use.
+    await request(app)
+      .post("/auth/reset-password")
+      .send({ token: resetToken, password: newPassword })
+      .expect(401);
+  });
+
+  it("rejects an invalid reset token with 401 INVALID_TOKEN", async () => {
+    const res = await request(app)
+      .post("/auth/reset-password")
+      .send({ token: "not-a-real-token", password: "Anoth3r-Str0ng!pw" })
+      .expect(401);
+    expect(res.body.error.code).toBe("INVALID_TOKEN");
+  });
+
+  it("rejects a weak new password with 400 VALIDATION_ERROR", async () => {
+    const res = await request(app)
+      .post("/auth/reset-password")
+      .send({ token: "whatever", password: "short" })
+      .expect(400);
+    expect(res.body.error.code).toBe("VALIDATION_ERROR");
   });
 });
 
