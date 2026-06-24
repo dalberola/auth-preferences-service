@@ -12,12 +12,12 @@ Invoke as `/<name> [argument]`.
 | Command | Argument | What it does |
 | --- | --- | --- |
 | `/onboard` | `quick` \| `full` (default `full`) | Guided walkthrough: orient → run → exercise → verify. |
-| `/dev` | `up` \| `down` \| `restart` \| `rebuild` | Start/stop the Docker dev stack (app + mongo + mailpit). |
-| `/test` | optional Vitest pattern | Run the Vitest suite (host or container-vs-real-Mongo). |
+| `/dev` | `up` \| `down` \| `restart` \| `rebuild` | Start/stop the Docker dev stack (app + mariadb + mailpit). |
+| `/test` | optional Vitest pattern | Run the Vitest suite (against a real MariaDB). |
 | `/lint` | `check` \| `fix` | ESLint (flat config); keep at 0 problems. |
 | `/verify` | `host` \| `docker` | Full gate: typecheck + lint + test. Run before "done". |
 | `/logs` | optional service | Show & diagnose stack logs (disk-full, startup failures). |
-| `/db-shell` | optional mongosh expr | Query the dev MongoDB (`auth_preferences`). |
+| `/db-shell` | optional SQL | Query the dev MariaDB via the `mariadb` client (`auth_preferences`). |
 | `/mailpit` | `open` \| `latest` | Inspect captured verification emails / pull the link. |
 | `/new-endpoint` | module name | Scaffold a `validators/service/controller/routes` module. |
 | `/reset-db` | — | Drop the dev database (destructive; confirms first). |

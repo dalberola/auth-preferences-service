@@ -1,6 +1,6 @@
 # Development
 
-Dev runs in Docker: `app` (tsx watch) + `mongo` + `mailpit`.
+Dev runs in Docker: `app` (tsx watch) + `mariadb` + `mailpit`.
 
 ## Start
 
@@ -13,7 +13,7 @@ docker compose up --build
 | --- | --- | --- |
 | API | http://localhost:4000 | `GET /health` |
 | Mailpit | http://localhost:8025 | catches verification emails |
-| MongoDB | mongodb://localhost:27017 | data in the `mongo_data` volume |
+| MariaDB | localhost:3306 | data in the `mariadb_data` volume |
 
 The source is bind-mounted; `tsx watch` hot-reloads on host edits.
 
@@ -33,25 +33,30 @@ npm test           # vitest
 The suite is a full end-to-end pass over register → verify → login → preferences
 → refresh, with the mailer mocked to capture the token.
 
-- **Host (macOS arm64):** `npm test` — `mongodb-memory-server` downloads the
-  matching binary automatically.
-- **Container:** set `MONGODB_TEST_URI` to a real Mongo and no binary is needed:
+Tests always run against a real MariaDB. The harness (`test/setup.ts`) defaults
+the `DB_*` vars to `127.0.0.1:3306` with database `auth_preferences_test`,
+creates that database if absent, then drops and recreates its schema each run
+(`NODE_ENV=test` ⇒ TypeORM `dropSchema`). With the compose stack up the defaults
+match it, so the bare gate works:
 
 ```bash
-docker run --rm --network auth-preferences-service_default \
-  -e MONGODB_TEST_URI=mongodb://mongo:27017/test \
-  -v "$PWD":/app -w /app node:24-slim \
-  sh -c "npm install && npm test"
+npm run typecheck && npm run lint && npm test
 ```
+
+If your MariaDB differs, `export DB_HOST=… DB_PORT=…` first — a
+`VAR=… cmd1 && cmd2` prefix applies only to `cmd1`, and it's `npm test` that needs
+the vars.
 
 The full verification gate (`typecheck && lint && test`) is wrapped by the
 `/verify` skill.
 
 ## Troubleshooting
 
-### Mongo crash-loops with `exit 100` / `No space left on device`
-The Docker VM's virtual disk is full (not your host disk). Mongo can't create
-`/data/db/journal`. Reclaim space — build cache is safe to drop:
+### `mariadb` container fails / is unhealthy and the app keeps retrying
+The app retries connecting to host `mariadb`; if it never goes healthy, check the
+`mariadb` container. A common cause is a full Docker VM virtual disk (not your
+host disk) — the DB container can't write its data. Reclaim space — build cache
+is safe to drop:
 
 ```bash
 docker system df              # see what's consuming space
@@ -64,10 +69,11 @@ docker compose up -d          # then restart; may also need: docker compose rest
 failed startup). Check `docker compose logs app` and `curl localhost:4000/health`.
 After fixing the cause, `docker compose restart app`.
 
-### Tests 403 on `mongodb-memory-server` download
-You're on arm64 Linux, which has no published in-memory binary. Use the
-`MONGODB_TEST_URI` approach above.
+### `ERR_MODULE_NOT_FOUND` after changing dependencies
+The app's anonymous `/app/node_modules` volume can shadow the rebuilt image and
+hide newly installed modules. Rebuild and renew the anonymous volume:
+`docker compose up --build --renew-anon-volumes`.
 
-### `app` exits before Mongo is ready
-It shouldn't — `connect.ts` retries (10×/3s) and compose gates on a Mongo
-healthcheck. If it still gives up, Mongo is down for > ~30s; check `mongo` logs.
+### `app` exits before the DB is ready
+It shouldn't — `connect.ts` retries (10×/3s) and compose gates on a MariaDB
+healthcheck. If it still gives up, check `mariadb` logs.

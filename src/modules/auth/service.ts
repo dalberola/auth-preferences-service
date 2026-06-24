@@ -1,5 +1,7 @@
+import { IsNull } from "typeorm";
 import { env } from "../../config/env.js";
-import { User } from "../../models/user.js";
+import { AppDataSource } from "../../db/data-source.js";
+import { User, defaultPreferences } from "../../models/user.js";
 import { VerificationToken } from "../../models/verificationToken.js";
 import { RefreshToken } from "../../models/refreshToken.js";
 import { hashPassword, verifyPassword } from "../../lib/password.js";
@@ -12,17 +14,24 @@ import type { LoginInput, RegisterInput } from "./validators.js";
 const VERIFY_TTL_MS = 24 * 60 * 60 * 1000;
 const REFRESH_TTL_MS = () => env.REFRESH_TTL_DAYS * 24 * 60 * 60 * 1000;
 
+const users = () => AppDataSource.getRepository(User);
+const verifications = () => AppDataSource.getRepository(VerificationToken);
+const refreshTokens = () => AppDataSource.getRepository(RefreshToken);
+
 async function issueVerification(
   userId: string,
   email: string,
 ): Promise<void> {
   const { raw, hash } = generateToken();
-  await VerificationToken.create({
-    userId,
-    tokenHash: hash,
-    type: "email_verify",
-    expiresAt: new Date(Date.now() + VERIFY_TTL_MS),
-  });
+  const repo = verifications();
+  await repo.save(
+    repo.create({
+      userId,
+      tokenHash: hash,
+      type: "email_verify",
+      expiresAt: new Date(Date.now() + VERIFY_TTL_MS),
+    }),
+  );
   await sendVerificationEmail(email, raw);
 }
 
@@ -32,11 +41,14 @@ async function issueVerification(
  */
 export async function register(input: RegisterInput): Promise<void> {
   const email = input.email.toLowerCase();
-  const existing = await User.findOne({ email });
+  const repo = users();
+  const existing = await repo.findOne({ where: { email } });
 
   if (!existing) {
     const passwordHash = await hashPassword(input.password);
-    const user = await User.create({ email, passwordHash });
+    const user = await repo.save(
+      repo.create({ email, passwordHash, preferences: defaultPreferences() }),
+    );
     await issueVerification(user.id, email);
     return;
   }
@@ -49,22 +61,18 @@ export async function register(input: RegisterInput): Promise<void> {
 
 export async function verifyEmail(rawToken: string): Promise<void> {
   const tokenHash = hashToken(rawToken);
-  const record = await VerificationToken.findOne({
-    tokenHash,
-    type: "email_verify",
-    consumedAt: null,
+  const repo = verifications();
+  const record = await repo.findOne({
+    where: { tokenHash, type: "email_verify", consumedAt: IsNull() },
   });
 
   if (!record || record.expiresAt.getTime() < Date.now()) {
     throw unauthorized("INVALID_TOKEN", "Invalid or expired verification link");
   }
 
-  await User.updateOne(
-    { _id: record.userId },
-    { $set: { emailVerified: true } },
-  );
+  await users().update(record.userId, { emailVerified: true });
   record.consumedAt = new Date();
-  await record.save();
+  await repo.save(record);
 }
 
 export type IssuedTokens = {
@@ -79,13 +87,14 @@ async function issueRefreshToken(
 ): Promise<{ raw: string; expiresAt: Date }> {
   const { raw, hash } = generateToken();
   const expiresAt = new Date(Date.now() + REFRESH_TTL_MS());
-  await RefreshToken.create({ userId, tokenHash: hash, family, expiresAt });
+  const repo = refreshTokens();
+  await repo.save(repo.create({ userId, tokenHash: hash, family, expiresAt }));
   return { raw, expiresAt };
 }
 
 export async function login(input: LoginInput): Promise<IssuedTokens> {
   const email = input.email.toLowerCase();
-  const user = await User.findOne({ email });
+  const user = await users().findOne({ where: { email } });
   const ok = user && (await verifyPassword(user.passwordHash, input.password));
 
   if (!user || !ok) {
@@ -105,7 +114,8 @@ export async function login(input: LoginInput): Promise<IssuedTokens> {
 
 export async function refresh(rawToken: string): Promise<IssuedTokens> {
   const tokenHash = hashToken(rawToken);
-  const record = await RefreshToken.findOne({ tokenHash });
+  const repo = refreshTokens();
+  const record = await repo.findOne({ where: { tokenHash } });
 
   if (!record) {
     throw unauthorized("INVALID_TOKEN", "Invalid refresh token");
@@ -113,9 +123,9 @@ export async function refresh(rawToken: string): Promise<IssuedTokens> {
 
   // Reuse of an already-rotated token => compromise. Burn the whole family.
   if (record.revokedAt) {
-    await RefreshToken.updateMany(
-      { family: record.family, revokedAt: null },
-      { $set: { revokedAt: new Date() } },
+    await repo.update(
+      { family: record.family, revokedAt: IsNull() },
+      { revokedAt: new Date() },
     );
     throw unauthorized("TOKEN_REUSE", "Refresh token reuse detected");
   }
@@ -124,11 +134,11 @@ export async function refresh(rawToken: string): Promise<IssuedTokens> {
     throw unauthorized("INVALID_TOKEN", "Refresh token expired");
   }
 
-  const userId = record.userId.toString();
+  const userId = record.userId;
   const next = await issueRefreshToken(userId, record.family);
   record.revokedAt = new Date();
   record.replacedByHash = hashToken(next.raw);
-  await record.save();
+  await repo.save(record);
 
   return {
     accessToken: signAccessToken(userId),
@@ -139,15 +149,15 @@ export async function refresh(rawToken: string): Promise<IssuedTokens> {
 
 export async function logout(rawToken: string | undefined): Promise<void> {
   if (!rawToken) return;
-  await RefreshToken.updateOne(
-    { tokenHash: hashToken(rawToken), revokedAt: null },
-    { $set: { revokedAt: new Date() } },
+  await refreshTokens().update(
+    { tokenHash: hashToken(rawToken), revokedAt: IsNull() },
+    { revokedAt: new Date() },
   );
 }
 
 export async function resendVerification(rawEmail: string): Promise<void> {
   const email = rawEmail.toLowerCase();
-  const user = await User.findOne({ email });
+  const user = await users().findOne({ where: { email } });
   if (user && !user.emailVerified) {
     await issueVerification(user.id, email);
   }

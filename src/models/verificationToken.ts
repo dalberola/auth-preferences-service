@@ -1,23 +1,37 @@
-import { Schema, model } from "mongoose";
+import {
+  Column,
+  CreateDateColumn,
+  Entity,
+  Index,
+  PrimaryGeneratedColumn,
+} from "typeorm";
 
-const verificationTokenSchema = new Schema({
-  userId: {
-    type: Schema.Types.ObjectId,
-    ref: "User",
-    required: true,
-    index: true,
-  },
-  tokenHash: { type: String, required: true, unique: true },
-  type: { type: String, enum: ["email_verify"], required: true },
-  expiresAt: { type: Date, required: true },
-  consumedAt: { type: Date, default: null },
-  createdAt: { type: Date, default: () => new Date() },
-});
+export type VerificationType = "email_verify";
 
-// TTL index: Mongo removes documents once `expiresAt` passes.
-verificationTokenSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
+@Entity({ name: "verification_tokens" })
+export class VerificationToken {
+  @PrimaryGeneratedColumn("uuid")
+  id!: string;
 
-export const VerificationToken = model(
-  "VerificationToken",
-  verificationTokenSchema,
-);
+  // FK to User.id (UUID).
+  @Index()
+  @Column({ type: "char", length: 36 })
+  userId!: string;
+
+  // SHA-256 hex of the raw token (64 chars).
+  @Index({ unique: true })
+  @Column({ type: "varchar", length: 255 })
+  tokenHash!: string;
+
+  @Column({ type: "varchar", length: 32 })
+  type!: VerificationType;
+
+  @Column({ type: "datetime" })
+  expiresAt!: Date;
+
+  @Column({ type: "datetime", nullable: true })
+  consumedAt!: Date | null;
+
+  @CreateDateColumn({ type: "datetime" })
+  createdAt!: Date;
+}

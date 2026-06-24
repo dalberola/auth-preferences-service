@@ -9,6 +9,21 @@ All notable changes to this project are documented here. Format loosely follows
 _Track in-flight work via [issues](https://github.com/dalberola/auth-preferences-service/issues)
 and [milestones](https://github.com/dalberola/auth-preferences-service/milestones)._
 
+### Changed
+- **BREAKING:** migrated persistence from MongoDB/Mongoose to **TypeORM 1.0 +
+  MariaDB** ([#6](https://github.com/dalberola/auth-preferences-service/issues/6)).
+  Entities replace Mongoose schemas; UUID primary keys keep IDs opaque so the API
+  contract is unchanged. `preferences` is now a JSON column (read-merge-save
+  partial updates). Config swaps `MONGODB_URI` for `DB_HOST`/`DB_PORT`/`DB_USER`/
+  `DB_PASSWORD`/`DB_NAME`. Docker stack and CI now run MariaDB; the test harness
+  runs against a real MariaDB (the `mongodb-memory-server` dependency and its
+  arm64 binary gotcha are gone).
+
+### Known limitations
+- Expired tokens are no longer auto-reaped (MariaDB has no TTL index); expiry is
+  still enforced in code. Cleanup job tracked in
+  [#7](https://github.com/dalberola/auth-preferences-service/issues/7).
+
 ## [0.1.0] - 2026-06-24
 
 Initial dev-ready baseline.

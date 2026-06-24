@@ -11,7 +11,11 @@ services:
         required: false
     environment:
       # Overrides point the app at the compose-network services regardless of .env.
-      MONGODB_URI: mongodb://mongo:27017/auth_preferences
+      DB_HOST: mariadb
+      DB_PORT: "3306"
+      DB_USER: root
+      DB_PASSWORD: root
+      DB_NAME: auth_preferences
       SMTP_HOST: mailpit
       SMTP_PORT: "1025"
     ports:
@@ -21,20 +25,23 @@ services:
       # Anonymous volume keeps the container's built node_modules (incl. native argon2).
       - /app/node_modules
     depends_on:
-      mongo:
+      mariadb:
         condition: service_healthy
       mailpit:
         condition: service_started
 
-  mongo:
-    image: mongo:8
+  mariadb:
+    image: mariadb:11
     restart: unless-stopped
+    environment:
+      MARIADB_ROOT_PASSWORD: root
+      MARIADB_DATABASE: auth_preferences
     volumes:
-      - mongo_data:/data/db
+      - mariadb_data:/var/lib/mysql
     ports:
-      - "27017:27017"
+      - "3306:3306"
     healthcheck:
-      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -48,4 +55,4 @@ services:
       - "1025:1025" # SMTP
 
 volumes:
-  mongo_data:
+  mariadb_data:

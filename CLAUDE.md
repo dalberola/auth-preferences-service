@@ -12,16 +12,18 @@ was split out of the Tabliss project but does not depend on it).
 
 ## Stack (all latest majors as of creation)
 
-Node 24 · TypeScript 6 · **Express 5** · MongoDB 8 / **Mongoose 9** · Zod 4 ·
-argon2 · jsonwebtoken 9 · Nodemailer 9 · Pino · **Vitest 4** · ESLint 10 +
+Node 24 · TypeScript 6 · **Express 5** · **MariaDB 11 / TypeORM 1.0** (mysql2) ·
+Zod 4 · argon2 · jsonwebtoken 9 · Nodemailer 9 · Pino · **Vitest 4** · ESLint 10 +
 typescript-eslint 8. ESM throughout (`"type": "module"`, `NodeNext` resolution —
-**relative imports use `.js` extensions**). Dev runs entirely in Docker.
+**relative imports use `.js` extensions**). TypeORM needs legacy decorators:
+`experimentalDecorators` + `emitDecoratorMetadata` are on, and entrypoints import
+`reflect-metadata`. Dev runs entirely in Docker.
 
 ## Run it
 
 ```bash
 cp .env.example .env.local      # set the two JWT secrets (openssl rand -hex 32)
-docker compose up --build       # app :4000 · mailpit :8025 · mongo :27017
+docker compose up --build       # app :4000 · mailpit :8025 · mariadb :3306
 ```
 
 The `app` container runs `tsx watch` over a bind mount, so host edits hot-reload.
@@ -31,32 +33,31 @@ SMTP in dev.
 ## Verify EVERY change before calling it done
 
 ```bash
-# host (macOS): in-memory Mongo is downloaded automatically
+# Tests need a reachable MariaDB. test/setup.ts defaults DB_* to the compose
+# stack (127.0.0.1:3306, root/root, db auth_preferences_test), so with /dev up:
 npm run typecheck && npm run lint && npm test
-
-# inside a container (arm64 can't fetch the in-memory binary — see gotchas):
-docker run --rm --network auth-preferences-service_default \
-  -e MONGODB_TEST_URI=mongodb://mongo:27017/test \
-  -v "$PWD":/app -w /app node:24-slim \
-  sh -c "npm run typecheck && npm run lint && npm test"
 ```
 
-Vitest uses esbuild and does **not** type-check — always run `typecheck`
-separately. The `/verify` skill wraps this.
+The test harness creates the `*_test` database if absent and drops its schema each
+run. If your MariaDB differs, `export DB_HOST=… DB_PORT=…` first so the overrides
+reach `npm test` (a `VAR=… cmd1 && cmd2` prefix only applies to `cmd1`). CI
+overrides `DB_*` for its MariaDB service container. Vitest uses esbuild and does
+**not** type-check — always run `typecheck` separately. The `/verify` skill wraps this.
 
 ## Layout
 
 ```
 src/
   config/env.ts        zod-validated env; loads .env.local then .env; exits on invalid config
-  db/connect.ts        mongoose connection WITH retry/backoff
-  models/              User (preferences embedded) · VerificationToken · RefreshToken
+  db/data-source.ts    TypeORM DataSource (explicit entity list, NO globs); imports reflect-metadata
+  db/connect.ts        DataSource.initialize() WITH retry/backoff
+  models/              User (preferences JSON) · VerificationToken · RefreshToken — TypeORM entities
   lib/                 password(argon2) · tokens(crypto) · jwt · mailer · logger · errors
   middleware/          requireAuth · errorHandler · rateLimit
   modules/auth/        register · verify · login · refresh · logout · resend
   modules/preferences/ GET/PUT /me/preferences
   app.ts · server.ts
-test/                  end-to-end flow (Vitest + real/in-memory Mongo)
+test/                  end-to-end flow (Vitest + real MariaDB)
 docs/                  architecture · api · configuration · development · security · data-model
 .claude/               skills (commands/) + this config's index
 ```
@@ -66,7 +67,8 @@ docs/                  architecture · api · configuration · development · se
 - **New HTTP feature** = a module folder with `validators.ts` (zod), `service.ts`
   (business logic, throws `AppError`), `controller.ts` (Express handlers, parse →
   call service → respond), `routes.ts` (Router); mount it in `app.ts`. Use the
-  `/new-endpoint` skill. Keep controllers thin; never put Mongoose calls in them.
+  `/new-endpoint` skill. Keep controllers thin; data access (TypeORM repositories)
+  lives only in `service.ts`, never in controllers.
 - **Errors**: throw `AppError` (or `badRequest`/`unauthorized`/`forbidden` from
   `lib/errors.ts`). Express 5 forwards thrown/rejected errors to `errorHandler`,
   which maps `AppError` and `ZodError` to JSON — don't write try/catch in routes.
@@ -80,14 +82,20 @@ docs/                  architecture · api · configuration · development · se
 
 ## Gotchas (learned the hard way)
 
-- **Docker VM disk fills up** → Mongo dies with `exit 100` /
-  `No space left on device` creating `/data/db/journal`, and the app then fails
-  with `ENOTFOUND mongo`. Fix: `docker builder prune -af` (build cache is safe to
-  drop). Diagnose with the `/logs` skill.
-- **`mongodb-memory-server` has no aarch64/debian12 binary** — it 403s in arm64
-  Linux containers. That's why the test harness uses `MONGODB_TEST_URI` against a
-  real Mongo when set, and only falls back to the in-memory server on hosts that
-  can fetch the binary (e.g. macOS arm64).
+- **TypeORM decorators only transform inside the tsconfig `include` scope.** tsx
+  and Vitest both use esbuild (via `get-tsconfig`), which applies
+  `experimentalDecorators` **only to files matched by `include` (`["src"]`)**.
+  An entity placed outside `src/` gets the standard-ES-decorator transform and
+  TypeORM crashes (`__decorateElement` → `Cannot read properties of undefined
+  (reading 'constructor')`). **Keep all entities under `src/`.**
+- **Stale `node_modules` in the anonymous volume.** The `app` service mounts an
+  anonymous volume at `/app/node_modules` (to preserve the container-built native
+  argon2). After changing dependencies, that volume **shadows** the freshly built
+  image's `node_modules` → `ERR_MODULE_NOT_FOUND`. Fix:
+  `docker compose up --build --renew-anon-volumes` (or `down` then `up --build`).
+- **Docker VM disk fills up** → the DB container can die / the app fails to reach
+  it. Fix: `docker builder prune -af` (build cache is safe to drop). Diagnose with
+  the `/logs` skill.
 - **`tsx watch` keeps the container "Up" even after the Node process exits**
   (e.g. a failed startup). A green `docker compose ps` does not prove the server
   is listening — check logs / `curl /health`. After fixing a startup failure the
@@ -105,7 +113,7 @@ and must keep them updated. See [docs/project-management.md](docs/project-manage
 - Discovered scope → open an issue, don't expand silently. Close issues from
   commits/PRs (`Closes #n`).
 - **CI must be green** before merging to `main` (`.github/workflows/ci.yml`:
-  typecheck → lint → test against a Mongo service). Check with `/ci`.
+  typecheck → lint → test against a MariaDB service). Check with `/ci`.
 - Releases via `/release` (version + changelog + tag + GitHub release + close
   milestone). Keep [CHANGELOG.md](CHANGELOG.md) in step.
 - Skills: `/triage` (issues/milestones), `/ci` (Actions), `/release`.

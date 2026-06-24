@@ -22,7 +22,11 @@ docker-compose loads both files, each optional, `.env.local` last.
 | --- | --- | --- | --- |
 | `NODE_ENV` | no | `development` | `development \| test \| production` |
 | `PORT` | no | `4000` | must be > 0 |
-| `MONGODB_URI` | **yes** | — | e.g. `mongodb://mongo:27017/auth_preferences` |
+| `DB_HOST` | **yes** | — | MariaDB host; `mariadb` in compose |
+| `DB_PORT` | no | `3306` | MariaDB port |
+| `DB_USER` | **yes** | — | MariaDB user |
+| `DB_PASSWORD` | no | `""` | MariaDB password |
+| `DB_NAME` | **yes** | — | database name, e.g. `auth_preferences` |
 | `JWT_ACCESS_SECRET` | **yes** | — | ≥ 32 chars; `openssl rand -hex 32` |
 | `JWT_REFRESH_SECRET` | **yes** | — | ≥ 32 chars; **different** from access |
 | `ACCESS_TTL` | no | `15m` | zeit/ms format for the access JWT |
@@ -37,10 +41,10 @@ docker-compose loads both files, each optional, `.env.local` last.
 
 ## docker-compose overrides
 
-`docker-compose.yml` sets `MONGODB_URI`, `SMTP_HOST`, `SMTP_PORT` in the `app`
-service's `environment:` block so they always point at the compose-network
-services (`mongo`, `mailpit`) regardless of what your env files say. Secrets
-(`JWT_*`) still come from `.env.local`/`.env`.
+`docker-compose.yml` sets `DB_HOST`/`DB_PORT`/`DB_USER`/`DB_PASSWORD`/`DB_NAME`,
+`SMTP_HOST`, and `SMTP_PORT` in the `app` service's `environment:` block so they
+always point at the compose-network services (`mariadb`, `mailpit`) regardless of
+what your env files say. Secrets (`JWT_*`) still come from `.env.local`/`.env`.
 
 ## Generating secrets
 

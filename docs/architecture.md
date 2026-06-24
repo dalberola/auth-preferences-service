@@ -2,7 +2,7 @@
 
 ## Overview
 
-A single stateless Express service backed by MongoDB. Three capabilities:
+A single stateless Express service backed by MariaDB. Three capabilities:
 **register**, **verify email**, **read/write preferences**. Authentication is
 JWT-based (short-lived access token + rotating refresh token). Email is sent via
 SMTP (Mailpit in dev).
@@ -17,7 +17,7 @@ Client ──HTTPS──> Express app
                           ├─ controller  (parse input, shape response)
                           ├─ service     (business logic, throws AppError)
                           ├─ lib         password · tokens · jwt · mailer
-                          └─ models ──> MongoDB (users · verificationtokens · refreshtokens)
+                          └─ entities/repositories ──> MariaDB (users · verification_tokens · refresh_tokens)
                     mailer ──SMTP──> Mailpit (dev) / provider (prod)
 ```
 
@@ -33,7 +33,7 @@ Each feature is a **module** under `src/modules/<name>/` with a strict separatio
 | `routes.ts` | `Router` wiring + per-route middleware | Mounted in `app.ts` |
 
 Shared concerns live outside modules: `lib/` (pure helpers), `middleware/`
-(cross-cutting Express), `models/` (Mongoose schemas), `config/` (env), `db/`
+(cross-cutting Express), `models/` (TypeORM entities), `config/` (env), `db/`
 (connection).
 
 ## Error handling
@@ -89,7 +89,7 @@ Preferences are an **embedded subdocument** on the `User` (1:1, atomic, no join)
 
 ## Resilience
 
-`db/connect.ts` retries the initial connection (10×, 3s apart, 5s server-selection
-timeout) instead of exiting on first failure. In Docker, `app` additionally waits
-on a Mongo **healthcheck** (`depends_on: condition: service_healthy`). Together:
-the app starts only once Mongo is ready, and survives a brief Mongo outage.
+`db/connect.ts` retries the initial connection (10×, 3s apart) instead of exiting
+on first failure. In Docker, `app` additionally waits on a MariaDB **healthcheck**
+(`depends_on: condition: service_healthy`). Together: the app starts only once
+MariaDB is ready, and survives a brief MariaDB outage.
