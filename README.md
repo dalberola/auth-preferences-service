@@ -1,5 +1,7 @@
 # auth-preferences-service
 
+[![CI](https://github.com/dalberola/auth-preferences-service/actions/workflows/ci.yml/badge.svg)](https://github.com/dalberola/auth-preferences-service/actions/workflows/ci.yml)
+
 Standalone **registration + email-verification + user-preferences** API. No
 frontend; intentionally decoupled from any consumer.
 
@@ -54,6 +56,7 @@ Full reference with curl examples and error codes: [docs/api.md](docs/api.md).
 | Configuration | [docs/configuration.md](docs/configuration.md) |
 | Dev workflow & troubleshooting | [docs/development.md](docs/development.md) |
 | Security model | [docs/security.md](docs/security.md) |
+| Issues, milestones, releases, CI | [docs/project-management.md](docs/project-management.md) |
 
 ## Scripts
 

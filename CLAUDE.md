@@ -95,8 +95,24 @@ docs/                  architecture · api · configuration · development · se
 - **`.env.local` precedence**: `process.env` > `.env.local` > `.env`. dotenv never
   overrides already-set keys, so docker-compose-injected vars win.
 
+## Project tracking (GitHub is the source of truth)
+
+Work is tracked on GitHub — **issues**, **milestones**, **tags/releases**, and
+**Actions** — not just in these docs. Agents are authorized to operate these tools
+and must keep them updated. See [docs/project-management.md](docs/project-management.md).
+
+- Planned/known work → **issues** (labelled, assigned to a **milestone** = version).
+- Discovered scope → open an issue, don't expand silently. Close issues from
+  commits/PRs (`Closes #n`).
+- **CI must be green** before merging to `main` (`.github/workflows/ci.yml`:
+  typecheck → lint → test against a Mongo service). Check with `/ci`.
+- Releases via `/release` (version + changelog + tag + GitHub release + close
+  milestone). Keep [CHANGELOG.md](CHANGELOG.md) in step.
+- Skills: `/triage` (issues/milestones), `/ci` (Actions), `/release`.
+
 ## Status
 
-Branch `feature/auth-preferences-service`, local-only (never pushed). The refresh
-cookie suits a same-origin web client; a cross-origin browser-extension consumer
-would move the refresh token to the response body + extension storage.
+Repo: **github.com/dalberola/auth-preferences-service** (private). `main` is the
+default branch and is pushed. Baseline tagged `v0.1.0`. The refresh cookie suits a
+same-origin web client; a cross-origin browser-extension consumer would move the
+refresh token to the response body + extension storage (tracked as an issue).
