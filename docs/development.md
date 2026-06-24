@@ -30,8 +30,11 @@ npm test           # vitest
 
 ## Testing
 
-The suite is a full end-to-end pass over register → verify → login → preferences
-→ refresh, with the mailer mocked to capture the token.
+The suite covers the end-to-end pass (register → verify → login → preferences →
+refresh) plus the security-critical edges: refresh-token reuse detection and
+family burn, logout revocation, partial-preference merge, validation errors, and
+rate limiting (in a dedicated spec that runs outside `NODE_ENV=test`). The mailer
+is mocked to capture the verification token.
 
 Tests always run against a real MariaDB. The harness (`test/setup.ts`) defaults
 the `DB_*` vars to `127.0.0.1:3306` with database `auth_preferences_test`,
