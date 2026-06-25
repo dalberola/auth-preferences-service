@@ -37,6 +37,10 @@ const schema = z.object({
   JWT_REFRESH_SECRET: z.string().min(32),
   ACCESS_TTL: z.string().default("15m"),
   REFRESH_TTL_DAYS: z.coerce.number().int().positive().default(14),
+  // Per-account login lockout: lock after this many consecutive failures, for
+  // this many minutes. Complements the IP-based rate limiter (middleware/rateLimit).
+  LOGIN_MAX_ATTEMPTS: z.coerce.number().int().positive().default(5),
+  LOGIN_LOCK_MINUTES: z.coerce.number().int().positive().default(15),
   // How often the background reaper deletes expired tokens (MariaDB has no TTL).
   REAP_INTERVAL_MINUTES: z.coerce.number().int().positive().default(60),
   // How the refresh token reaches the client: httpOnly cookie (same-origin web,

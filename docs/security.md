@@ -52,7 +52,18 @@ neutral errors so an attacker cannot probe which emails are registered or verifi
 
 ## Rate limiting
 `express-rate-limit`: `/auth/*` 20 req / 15 min, `/me/*` 100 req / 15 min
-(`lib`/`middleware/rateLimit.ts`; disabled under `NODE_ENV=test`).
+(`lib`/`middleware/rateLimit.ts`; disabled under `NODE_ENV=test`). This is
+**per-IP** — accurate client-IP attribution behind a proxy depends on `TRUST_PROXY`.
+
+## Account lockout
+Complementing the per-IP limiter, login failures are throttled **per account**
+(`modules/auth/service.ts`). After `LOGIN_MAX_ATTEMPTS` (default 5) consecutive
+failures the account is locked for `LOGIN_LOCK_MINUTES` (default 15); a correct
+login clears the counter and an elapsed lock auto-resets. While locked, login
+returns the **same generic `INVALID_CREDENTIALS`** as a bad password — it never
+reveals that the account exists or is locked (consistent with the enumeration
+posture above). Trade-off: an attacker who knows an address can keep it locked by
+forcing failures; the time-boxed auto-unlock bounds that denial of service.
 
 ## Input validation
 Every request body/query is parsed with a Zod schema at the controller boundary;

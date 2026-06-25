@@ -375,3 +375,56 @@ describe("token reaper", () => {
     expect(await vt.findOneBy({ id: liveV.id })).not.toBeNull();
   });
 });
+
+describe("login lockout", () => {
+  const wrong = "wrong-but-long-enough";
+
+  it("locks the account after repeated failures and rejects the correct password", async () => {
+    const { env } = await import("../src/config/env.js");
+    const addr = "lockme@example.com";
+    await registerAndVerify(addr);
+
+    for (let i = 0; i < env.LOGIN_MAX_ATTEMPTS; i++) {
+      await request(app)
+        .post("/auth/login")
+        .send({ email: addr, password: wrong })
+        .expect(401);
+    }
+
+    // Locked: the correct password now also fails, with the same generic error
+    // (no signal that the account exists or is locked).
+    const res = await request(app)
+      .post("/auth/login")
+      .send({ email: addr, password })
+      .expect(401);
+    expect(res.body.error.code).toBe("INVALID_CREDENTIALS");
+  });
+
+  it("auto-unlocks after the window and a successful login clears the counter", async () => {
+    const { env } = await import("../src/config/env.js");
+    const { AppDataSource } = await import("../src/db/data-source.js");
+    const { User } = await import("../src/models/user.js");
+    const repo = AppDataSource.getRepository(User);
+
+    const addr = "unlockme@example.com";
+    await registerAndVerify(addr);
+
+    for (let i = 0; i < env.LOGIN_MAX_ATTEMPTS; i++) {
+      await request(app)
+        .post("/auth/login")
+        .send({ email: addr, password: wrong })
+        .expect(401);
+    }
+    const locked = await repo.findOneByOrFail({ email: addr });
+    expect(locked.lockedUntil).not.toBeNull();
+
+    // Simulate the lock window elapsing.
+    await repo.update({ email: addr }, { lockedUntil: new Date(Date.now() - 60_000) });
+
+    // The correct password works again and resets the lockout bookkeeping.
+    await request(app).post("/auth/login").send({ email: addr, password }).expect(200);
+    const after = await repo.findOneByOrFail({ email: addr });
+    expect(after.failedLoginAttempts).toBe(0);
+    expect(after.lockedUntil).toBeNull();
+  });
+});

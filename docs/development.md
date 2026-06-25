@@ -77,6 +77,16 @@ they pick up the `.ts` sources. The CLI uses the same `DB_*` env as the app; poi
 it at the target database before running. Commit the generated migration — the prod
 image compiles it to `dist/migrations` and applies it on boot.
 
+> **Generate against a baselined database.** `migration:generate` diffs entities
+> against the *current* schema, so generate against a DB with the existing
+> migrations applied (e.g. a fresh DB after `migration:run`), not the dev DB whose
+> `synchronize` has already added the new columns (that yields an empty diff).
+>
+> **Review the output — TypeORM emits phantom diffs.** Against MariaDB it
+> re-suggests no-op `CHANGE` statements for nullable `datetime`/`varchar` columns
+> on every generate (and their `down` adds a bogus `DEFAULT 'NULL'`). Keep only the
+> intentional changes.
+
 > The migrations glob is skipped under `NODE_ENV=test` (the suite uses
 > `synchronize` + `dropSchema`); Vitest workers can't import the `.ts` migration
 > through Node's loader.

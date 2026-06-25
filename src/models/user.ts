@@ -40,6 +40,14 @@ export class User {
   @Column({ type: "boolean", default: false })
   emailVerified!: boolean;
 
+  // Per-account login lockout (managed by modules/auth/service.ts). Consecutive
+  // failed logins increment the counter; crossing the threshold sets `lockedUntil`.
+  @Column({ type: "int", default: 0 })
+  failedLoginAttempts!: number;
+
+  @Column({ type: "datetime", nullable: true })
+  lockedUntil!: Date | null;
+
   // JSON column (MariaDB has no embedded-document type). Partial updates are done
   // read-merge-save in the service rather than via column-level writes.
   @Column({ type: "json" })
