@@ -1,0 +1,28 @@
+name: Issue triage
+
+# Ensures every issue lands in a workflow lane: when an issue is opened without a
+# `lane:*` label, drop it into `lane:needs-triage` so nothing falls through. Issues
+# created already carrying a lane (e.g. by an agent following the workflow) are left
+# untouched.
+on:
+  issues:
+    types: [opened]
+
+permissions:
+  issues: write
+
+jobs:
+  assign-lane:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/github-script@v7
+        with:
+          script: |
+            const labels = context.payload.issue.labels.map((l) => l.name);
+            if (labels.some((name) => name.startsWith('lane:'))) return;
+            await github.rest.issues.addLabels({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              labels: ['lane:needs-triage'],
+            });
