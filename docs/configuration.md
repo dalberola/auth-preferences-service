@@ -29,7 +29,6 @@ docker-compose loads both files, each optional, `.env.local` last.
 | `DB_PASSWORD` | no | `""` | MariaDB password |
 | `DB_NAME` | **yes** | — | database name, e.g. `auth_preferences` |
 | `JWT_ACCESS_SECRET` | **yes** | — | ≥ 32 chars; `openssl rand -hex 32` |
-| `JWT_REFRESH_SECRET` | **yes** | — | ≥ 32 chars; **different** from access |
 | `ACCESS_TTL` | no | `15m` | zeit/ms format for the access JWT |
 | `REFRESH_TTL_DAYS` | no | `14` | refresh-token lifetime in days |
 | `LOGIN_MAX_ATTEMPTS` | no | `5` | consecutive failed logins before a per-account lock |
@@ -55,5 +54,5 @@ what your env files say. Secrets (`JWT_*`) still come from `.env.local`/`.env`.
 ## Generating secrets
 
 ```bash
-openssl rand -hex 32   # run twice; one for each JWT secret
+openssl rand -hex 32   # for JWT_ACCESS_SECRET
 ```

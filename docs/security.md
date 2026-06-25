@@ -80,5 +80,4 @@ origins) and a recommended CAPTCHA add-on.
 See the **[deployment runbook](deployment.md)** for the full checklist, what is
 implemented vs. operator-owned, and step-by-step guidance — including the
 multi-instance caveat that the IP limiter's store is in-memory (lockout is
-DB-backed), and the unused `JWT_REFRESH_SECRET`
-([#21](https://github.com/dalberola/auth-preferences-service/issues/21)).
+DB-backed).

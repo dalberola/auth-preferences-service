@@ -6,9 +6,9 @@ Action: $ARGUMENTS
 
 ## Steps
 
-1. Ensure `.env.local` exists with the two JWT secrets set. If missing:
-   `cp .env.example .env.local` and tell the user to set `JWT_ACCESS_SECRET` and
-   `JWT_REFRESH_SECRET` (`openssl rand -hex 32`, two different values ≥ 32 chars).
+1. Ensure `.env.local` exists with `JWT_ACCESS_SECRET` set. If missing:
+   `cp .env.example .env.local` and tell the user to set `JWT_ACCESS_SECRET`
+   (`openssl rand -hex 32`, ≥ 32 chars).
 2. Run the requested action from the repo root:
    - `up` (default) → `docker compose up -d` (add `--build` if the image is stale)
    - `restart` → `docker compose restart app`

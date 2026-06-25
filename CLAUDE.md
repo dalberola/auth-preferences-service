@@ -22,7 +22,7 @@ typescript-eslint 8. ESM throughout (`"type": "module"`, `NodeNext` resolution �
 ## Run it
 
 ```bash
-cp .env.example .env.local      # set the two JWT secrets (openssl rand -hex 32)
+cp .env.example .env.local      # set JWT_ACCESS_SECRET (openssl rand -hex 32)
 docker compose up --build       # app :4000 · mailpit :8025 · mariadb :3306
 ```
 

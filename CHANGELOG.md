@@ -34,6 +34,13 @@ and [milestones](https://github.com/dalberola/auth-preferences-service/milestone
   login returns the same generic `INVALID_CREDENTIALS` (no enumeration). Adds the
   `failedLoginAttempts` / `lockedUntil` columns via migration.
 
+### Removed
+- **`JWT_REFRESH_SECRET`** config variable
+  ([#21](https://github.com/dalberola/auth-preferences-service/issues/21)): it was
+  required but read nowhere — refresh tokens are opaque random values stored as
+  sha256 hashes, not JWTs, so the secret signed nothing. Deployments can drop it
+  from their environment; only `JWT_ACCESS_SECRET` is needed.
+
 ### Documentation
 - **Deployment & hardening runbook** (`docs/deployment.md`,
   [#5](https://github.com/dalberola/auth-preferences-service/issues/5)): the
