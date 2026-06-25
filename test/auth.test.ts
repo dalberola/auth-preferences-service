@@ -3,6 +3,7 @@ import request from "supertest";
 import mysql from "mysql2/promise";
 import jwt from "jsonwebtoken";
 import type { Express } from "express";
+import { CONSENT_VERSION } from "../src/modules/auth/consent.js";
 
 // Capture the raw tokens instead of sending real emails.
 const captured = vi.hoisted(() => ({ token: "", resetToken: "" }));
@@ -57,7 +58,10 @@ function refreshCookie(
 
 /** Register a fresh account and consume its verification token. */
 async function registerAndVerify(addr: string): Promise<void> {
-  await request(app).post("/auth/register").send({ email: addr, password }).expect(202);
+  await request(app)
+    .post("/auth/register")
+    .send({ email: addr, password, acceptedTerms: true })
+    .expect(202);
   await request(app).get(`/auth/verify?token=${captured.token}`).expect(302);
 }
 
@@ -85,7 +89,7 @@ describe("registration + verification + preferences", () => {
   it("rejects login before the email is verified", async () => {
     await request(app)
       .post("/auth/register")
-      .send({ email, password })
+      .send({ email, password, acceptedTerms: true })
       .expect(202);
 
     await request(app)
@@ -209,6 +213,60 @@ describe("preferences (read-merge-save)", () => {
       locale: "es",
       settings: { a: 1 },
     });
+  });
+});
+
+describe("consent recording", () => {
+  async function consentRow(
+    addr: string,
+  ): Promise<{ consentVersion: string | null; consentAt: Date | null }> {
+    const db = await mysql.createConnection({
+      host: process.env.DB_HOST,
+      port: Number(process.env.DB_PORT),
+      user: process.env.DB_USER,
+      password: process.env.DB_PASSWORD,
+      database: process.env.DB_NAME,
+    });
+    const [rows] = await db.query(
+      "SELECT consentVersion, consentAt FROM users WHERE email = ?",
+      [addr],
+    );
+    await db.end();
+    return (rows as { consentVersion: string | null; consentAt: Date | null }[])[0];
+  }
+
+  it("blocks registration that does not accept the terms (400)", async () => {
+    const res = await request(app)
+      .post("/auth/register")
+      .send({ email: "noconsent@example.com", password })
+      .expect(400);
+    expect(res.body.error.code).toBe("VALIDATION_ERROR");
+  });
+
+  it("records the current consent version + a timestamp on registration", async () => {
+    const addr = "consent@example.com";
+    await request(app)
+      .post("/auth/register")
+      .send({ email: addr, password, acceptedTerms: true })
+      .expect(202);
+    const row = await consentRow(addr);
+    expect(row.consentVersion).toBe(CONSENT_VERSION);
+    expect(row.consentAt).not.toBeNull();
+  });
+
+  it("records a client-supplied consent version", async () => {
+    const addr = "consentversion@example.com";
+    await request(app)
+      .post("/auth/register")
+      .send({
+        email: addr,
+        password,
+        acceptedTerms: true,
+        consentVersion: "2099-01-01",
+      })
+      .expect(202);
+    const row = await consentRow(addr);
+    expect(row.consentVersion).toBe("2099-01-01");
   });
 });
 

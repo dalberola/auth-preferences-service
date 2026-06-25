@@ -44,7 +44,10 @@ afterAll(async () => {
 describe("refresh-token transport: body mode", () => {
   it("returns the refresh token in the body (no cookie) and refreshes from it", async () => {
     const email = "bodymode@example.com";
-    await request(app).post("/auth/register").send({ email, password }).expect(202);
+    await request(app)
+      .post("/auth/register")
+      .send({ email, password, acceptedTerms: true })
+      .expect(202);
     await request(app).get(`/auth/verify?token=${captured.token}`).expect(302);
 
     const login = await request(app)

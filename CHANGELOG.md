@@ -6,7 +6,17 @@ All notable changes to this project are documented here. Format loosely follows
 
 ## [Unreleased]
 
-_Track in-flight work via [issues](https://github.com/dalberola/auth-preferences-service/issues)
+### Added
+- **Consent recording at registration**
+  ([#45](https://github.com/dalberola/auth-preferences-service/issues/45)):
+  `POST /auth/register` now requires `acceptedTerms: true` (registration is
+  blocked otherwise) and records the accepted Terms/Privacy version + timestamp
+  on the user (`consentVersion`/`consentAt`; migration `AddUserConsent`). The
+  optional `consentVersion` field is recorded as sent, else the server's current
+  `CONSENT_VERSION` (`2026-06-25`, tied to the consumer's legal pages). Supports
+  the tabliss account/sync onboarding.
+
+_Track other in-flight work via [issues](https://github.com/dalberola/auth-preferences-service/issues)
 and [milestones](https://github.com/dalberola/auth-preferences-service/milestones)._
 
 ## [1.3.0] - 2026-06-25

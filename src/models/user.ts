@@ -48,6 +48,14 @@ export class User {
   @Column({ type: "datetime", nullable: true })
   lockedUntil!: Date | null;
 
+  // GDPR consent record: which Terms/Privacy version the user accepted at
+  // registration, and when. Nullable for accounts created before consent capture.
+  @Column({ type: "varchar", length: 32, nullable: true })
+  consentVersion!: string | null;
+
+  @Column({ type: "datetime", nullable: true })
+  consentAt!: Date | null;
+
   // JSON column (MariaDB has no embedded-document type). Partial updates are done
   // read-merge-save in the service rather than via column-level writes.
   @Column({ type: "json" })
