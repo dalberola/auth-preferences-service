@@ -8,6 +8,7 @@ import { logger } from "./lib/logger.js";
 import { errorHandler } from "./middleware/errorHandler.js";
 import { authRouter } from "./modules/auth/routes.js";
 import { meRouter } from "./modules/preferences/routes.js";
+import { accountRouter } from "./modules/account/routes.js";
 
 export function createApp(): Express {
   const app = express();
@@ -30,6 +31,7 @@ export function createApp(): Express {
 
   app.use("/auth", authRouter);
   app.use("/me", meRouter);
+  app.use("/me", accountRouter);
 
   app.use(errorHandler);
   return app;
