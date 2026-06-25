@@ -15,8 +15,13 @@ and [milestones](https://github.com/dalberola/auth-preferences-service/milestone
   installs production-only dependencies (`npm ci --omit=dev`), runs as the non-root
   `node` user, and starts `node dist/server.js` with `NODE_ENV=production` and a
   `/health` HEALTHCHECK. `compose.prod.yml` runs the image locally against bundled
-  MariaDB/Mailpit. Note: `NODE_ENV=production` disables TypeORM schema auto-sync —
-  migrations land in [#5](https://github.com/dalberola/auth-preferences-service/issues/5).
+  MariaDB/Mailpit.
+- **Database migrations** ([#5](https://github.com/dalberola/auth-preferences-service/issues/5)):
+  production now owns its schema through TypeORM migrations instead of
+  `synchronize`. Added the initial schema migration and `migration:generate` /
+  `migration:run` / `migration:revert` / `migration:show` scripts (TypeORM CLI via
+  `tsx`). The prod image applies pending migrations automatically on startup
+  (`migrationsRun`); dev/test keep `synchronize`.
 
 ## [0.3.0] - 2026-06-24
 

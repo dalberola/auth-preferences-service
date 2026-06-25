@@ -50,11 +50,36 @@ Mailpit (JWT secrets read from `.env.local`):
 docker compose -f compose.prod.yml up --build
 ```
 
-> **Schema:** `NODE_ENV=production` disables TypeORM's `synchronize`, so the prod
-> image does **not** auto-create tables. Until migrations land
-> ([#5](https://github.com/dalberola/auth-preferences-service/issues/5)) the schema
-> must be created out-of-band. Real deployments supply their own managed MariaDB
-> and SMTP via environment rather than the bundled services.
+Real deployments supply their own managed MariaDB and SMTP via environment
+rather than the bundled services.
+
+## Migrations
+
+`NODE_ENV=production` disables TypeORM's `synchronize` (which would diff and alter
+the live schema on every boot). Production owns its schema through **migrations**
+instead: the prod image runs any pending migrations automatically on startup
+(`migrationsRun` in `db/data-source.ts`). Dev and test still build the schema from
+entities via `synchronize`, so this workflow only matters when you change an entity.
+
+After editing an entity, generate and review a migration (needs a reachable
+MariaDB — the compose stack works):
+
+```bash
+# Generate a migration from the entity diff (writes src/migrations/<ts>-Name.ts).
+npm run migration:generate -- src/migrations/AddSomething
+npm run migration:show      # list migrations and their applied state
+npm run migration:run       # apply pending migrations
+npm run migration:revert    # roll back the last one
+```
+
+The scripts drive TypeORM's CLI through `tsx` against `src/db/data-source.ts`, so
+they pick up the `.ts` sources. The CLI uses the same `DB_*` env as the app; point
+it at the target database before running. Commit the generated migration — the prod
+image compiles it to `dist/migrations` and applies it on boot.
+
+> The migrations glob is skipped under `NODE_ENV=test` (the suite uses
+> `synchronize` + `dropSchema`); Vitest workers can't import the `.ts` migration
+> through Node's loader.
 
 ## Testing
 
