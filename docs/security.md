@@ -42,8 +42,19 @@ Selectable via `REFRESH_TOKEN_TRANSPORT` (switch point in
   if kept in JS-reachable web storage it is exposed to XSS.
 
 ## Account enumeration
-`register`, `resend-verification`, and `login` return generic responses/timing-
-neutral errors so an attacker cannot probe which emails are registered or verified.
+`register` and `forgot-password` always return a generic `202`, and `login`
+returns the same generic `INVALID_CREDENTIALS` whether the email is unknown or the
+password is wrong. To close the **timing** side channel, `login` runs argon2 even
+when no account exists — against a precomputed dummy hash (`modules/auth/
+service.ts`) — so response time doesn't reveal whether an email is registered.
+
+Accepted residuals:
+- A correct password for an **unverified** account returns `403 EMAIL_NOT_VERIFIED`,
+  which confirms the account exists. Kept deliberately so a client can prompt
+  re-verification; the value to an attacker is marginal.
+- `forgot-password`/`resend-verification` do slightly more work for an existing
+  address (token generation + mail dispatch). The difference is small and masked by
+  variable SMTP latency, so it is not artificially equalized.
 
 ## Transport & headers
 - `helmet` sets secure response headers.

@@ -376,6 +376,16 @@ describe("token reaper", () => {
   });
 });
 
+describe("login enumeration", () => {
+  it("returns the same generic 401 for an unknown email as for a wrong password", async () => {
+    const res = await request(app)
+      .post("/auth/login")
+      .send({ email: "nobody-here@example.com", password: "whatever-long-enough" })
+      .expect(401);
+    expect(res.body.error.code).toBe("INVALID_CREDENTIALS");
+  });
+});
+
 describe("login lockout", () => {
   const wrong = "wrong-but-long-enough";
 
