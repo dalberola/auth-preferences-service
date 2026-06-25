@@ -99,11 +99,8 @@ docs/ · .claude/       documentation · Claude Code skills
 
 ## Future work
 
-- **Shared rate-limit store** for horizontal scaling: the per-IP limiter uses an
-  in-memory store, so counters are per-process — back it with Redis to share across
-  replicas (account lockout is already DB-backed). See
-  [docs/deployment.md](docs/deployment.md).
-- **Zero-downtime secret rotation**: verify access JWTs against both the old and new
-  `JWT_ACCESS_SECRET` during a short overlap window.
-- **CAPTCHA on register** (and optionally forgot-password) to deter automated abuse —
-  a recommended add-on, not yet implemented.
+Tracked as the backlog on GitHub — [`lane:backlog`](https://github.com/dalberola/auth-preferences-service/issues?q=is%3Aissue+is%3Aopen+label%3Alane%3Abacklog).
+Currently: a shared rate-limit store for multi-instance scaling, zero-downtime
+`JWT_ACCESS_SECRET` rotation, and CAPTCHA on register. The tracking workflow (lanes,
+milestones, processes) is described in
+[docs/project-management.md](docs/project-management.md).

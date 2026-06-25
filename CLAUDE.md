@@ -129,6 +129,16 @@ and must keep them updated. See [docs/project-management.md](docs/project-manage
 - Planned/known work → **issues** (labelled, assigned to a **milestone** = version).
 - Discovered scope → open an issue, don't expand silently. Close issues from
   commits/PRs (`Closes #n`).
+- **Lanes** (one `lane:*` label per issue): `backlog` → `ready` → `in-progress` →
+  `needs-verification` → done; plus `blocked` and `needs-triage`. Binding processes
+  (see [docs/project-management.md](docs/project-management.md)):
+  - **Found something uncertain while coding** → open an issue labelled
+    `uncertainty` + `lane:needs-verification`; it **stays open until verified** —
+    don't rely on the assumption until it's closed with evidence.
+  - **Planning an execution** → give it a milestone and/or issue first, then
+    `lane:ready` → `lane:in-progress`.
+  - **Deferring an idea** → issue in `lane:backlog` (no milestone). Docs/README link
+    to the backlog rather than duplicating it.
 - **CI must be green** before merging to `main` (`.github/workflows/ci.yml`:
   typecheck → lint → test against a MariaDB service). Check with `/ci`.
 - Releases via `/release` (version + changelog + tag + GitHub release + close
