@@ -22,6 +22,11 @@ const users = () => AppDataSource.getRepository(User);
 const verifications = () => AppDataSource.getRepository(VerificationToken);
 const refreshTokens = () => AppDataSource.getRepository(RefreshToken);
 
+// Precomputed once at startup. Login verifies against this when no account exists,
+// so the no-user path still pays the argon2 cost and its response time doesn't
+// reveal whether an email is registered (timing-based enumeration).
+const dummyPasswordHash = hashPassword(newId());
+
 async function issueVerification(
   userId: string,
   email: string,
@@ -128,7 +133,12 @@ export async function login(input: LoginInput): Promise<IssuedTokens> {
     throw unauthorized("INVALID_CREDENTIALS", "Invalid email or password");
   }
 
-  const ok = user && (await verifyPassword(user.passwordHash, input.password));
+  // Always run argon2 — against the dummy hash when no account exists — so the
+  // response time is the same whether or not the email is registered.
+  const ok = await verifyPassword(
+    user?.passwordHash ?? (await dummyPasswordHash),
+    input.password,
+  );
 
   if (!user || !ok) {
     if (user) await recordFailedLogin(user);

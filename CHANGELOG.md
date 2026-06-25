@@ -10,6 +10,13 @@ _Track in-flight work via [issues](https://github.com/dalberola/auth-preferences
 and [milestones](https://github.com/dalberola/auth-preferences-service/milestones)._
 
 ### Security
+- **Close the login timing oracle**
+  ([#30](https://github.com/dalberola/auth-preferences-service/issues/30)): login
+  skipped argon2 for unknown emails, so response time revealed whether an address
+  was registered. It now verifies against a precomputed dummy hash on the no-user
+  path, equalizing timing. `security.md`'s enumeration section is reconciled with
+  the actual behavior (including the accepted `403 EMAIL_NOT_VERIFIED` and
+  forgot/resend residuals).
 - **Redact credentials and tokens from request logs**
   ([#29](https://github.com/dalberola/auth-preferences-service/issues/29)): the
   default `pino-http` config logged the `Authorization`/`Cookie` request headers,
