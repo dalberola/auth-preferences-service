@@ -148,9 +148,9 @@ and must keep them updated. See [docs/project-management.md](docs/project-manage
 ## Status
 
 Repo: **github.com/dalberola/auth-preferences-service** (private). `main` is the
-default branch and is pushed. Baseline tagged `v0.1.0`; current release **v1.2.0**
+default branch and is pushed. Baseline tagged `v0.1.0`; current release **v1.3.0**
 (production image, TypeORM migrations, trust-proxy/SMTP-TLS config, login lockout,
-deployment runbook, graceful shutdown, log redaction + login-timing hardening). The
-refresh cookie suits a
+deployment runbook, graceful shutdown, log redaction, login-timing hardening,
+zero-downtime access-secret rotation). The refresh cookie suits a
 same-origin web client; a cross-origin browser-extension consumer would move the
 refresh token to the response body + extension storage (tracked as an issue).
