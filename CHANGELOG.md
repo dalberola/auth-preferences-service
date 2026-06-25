@@ -22,6 +22,11 @@ and [milestones](https://github.com/dalberola/auth-preferences-service/milestone
   `migration:run` / `migration:revert` / `migration:show` scripts (TypeORM CLI via
   `tsx`). The prod image applies pending migrations automatically on startup
   (`migrationsRun`); dev/test keep `synchronize`.
+- **Production config knobs** ([#5](https://github.com/dalberola/auth-preferences-service/issues/5)):
+  `TRUST_PROXY` makes Express's `trust proxy` configurable (hop count / `false` /
+  `true` / preset / CSV IP list) instead of the hardcoded `1`, so client-IP rate
+  limiting and `Secure`-cookie decisions are correct behind real proxies;
+  `SMTP_SECURE` enables implicit TLS (SMTPS, port 465) for real mail providers.
 
 ## [0.3.0] - 2026-06-24
 
