@@ -26,6 +26,14 @@ function setRefreshCookie(res: Response, token: string, expires: Date): void {
   res.cookie(REFRESH_COOKIE, token, refreshCookieOptions(expires));
 }
 
+// Clear the refresh cookie (no-op under `body` transport, where no cookie is
+// set). Shared by logout and account deletion.
+export function clearRefreshCookie(res: Response): void {
+  if (env.REFRESH_TOKEN_TRANSPORT === "cookie") {
+    res.clearCookie(REFRESH_COOKIE, { path: "/auth" });
+  }
+}
+
 // Switch point for the refresh-token transport (see docs/security.md). In
 // `cookie` mode it rides an httpOnly cookie; in `body` mode it travels in the
 // JSON body so cross-origin / extension clients can store it themselves.
@@ -87,9 +95,7 @@ export async function refresh(req: Request, res: Response): Promise<void> {
 export async function logout(req: Request, res: Response): Promise<void> {
   const current = readRefreshToken(req);
   await auth.logout(current);
-  if (env.REFRESH_TOKEN_TRANSPORT === "cookie") {
-    res.clearCookie(REFRESH_COOKIE, { path: "/auth" });
-  }
+  clearRefreshCookie(res);
   res.status(204).end();
 }
 

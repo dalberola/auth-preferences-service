@@ -179,6 +179,71 @@ describe("refresh-token rotation", () => {
   });
 });
 
+describe("account deletion", () => {
+  it("deletes the account, cascades its tokens, clears the cookie, and blocks re-login", async () => {
+    const { AppDataSource } = await import("../src/db/data-source.js");
+    const { User } = await import("../src/models/user.js");
+    const { RefreshToken } = await import("../src/models/refreshToken.js");
+    const { VerificationToken } = await import("../src/models/verificationToken.js");
+    const users = AppDataSource.getRepository(User);
+    const rts = AppDataSource.getRepository(RefreshToken);
+    const vts = AppDataSource.getRepository(VerificationToken);
+
+    const addr = "deleteme@example.com";
+    await registerAndVerify(addr);
+    const { accessToken, refreshToken } = await loginTokens(addr);
+
+    const user = await users.findOneByOrFail({ email: addr });
+    // Sanity: there are tokens to cascade before the delete.
+    expect(await rts.countBy({ userId: user.id })).toBeGreaterThan(0);
+    // A still-live verification token row (consumed verifications are deleted on
+    // verify) isn't guaranteed; seed one so the cascade is observable.
+    await vts.save(
+      vts.create({
+        userId: user.id,
+        tokenHash: `del-${user.id}`,
+        type: "email_verify",
+        expiresAt: new Date(Date.now() + 60 * 60_000),
+      }),
+    );
+
+    const res = await request(app)
+      .delete("/me")
+      .set("Authorization", `Bearer ${accessToken}`)
+      .set("Cookie", `refresh_token=${refreshToken}`)
+      .expect(204);
+
+    // The refresh cookie is cleared (expired) in the response.
+    const cleared = res.headers["set-cookie"];
+    const all = Array.isArray(cleared) ? cleared : cleared ? [cleared] : [];
+    expect(all.some((c) => c.startsWith("refresh_token=;"))).toBe(true);
+
+    // User row and both token families are gone.
+    expect(await users.findOneBy({ id: user.id })).toBeNull();
+    expect(await rts.countBy({ userId: user.id })).toBe(0);
+    expect(await vts.countBy({ userId: user.id })).toBe(0);
+
+    // The deleted account cannot log in or refresh anymore.
+    await request(app).post("/auth/login").send({ email: addr, password }).expect(401);
+    await sendRefresh(refreshToken).expect(401);
+  });
+
+  it("is idempotent: a repeat delete with a still-valid access token returns 204", async () => {
+    const addr = "deletetwice@example.com";
+    await registerAndVerify(addr);
+    const { accessToken } = await loginTokens(addr);
+    const bearer = `Bearer ${accessToken}`;
+
+    await request(app).delete("/me").set("Authorization", bearer).expect(204);
+    // Same short-lived access token, account already gone.
+    await request(app).delete("/me").set("Authorization", bearer).expect(204);
+  });
+
+  it("rejects unauthenticated deletion with 401", async () => {
+    await request(app).delete("/me").expect(401);
+  });
+});
+
 describe("preferences (read-merge-save)", () => {
   it("merges partial updates without clobbering untouched keys", async () => {
     const addr = "merge@example.com";
