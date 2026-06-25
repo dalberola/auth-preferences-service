@@ -1,0 +1,85 @@
+name: Lane board sync
+
+# Mirrors a `lane:*` label onto the Project board's "Lane" single-select field, so
+# the board card follows the canonical label. When changing lanes, GitHub removes
+# the old label and adds the new one; the `labeled` event for the new lane corrects
+# the field, so we only react to `labeled`.
+#
+# Requires a token with `project` scope — the default GITHUB_TOKEN cannot write
+# user-owned Projects v2. Add a repo secret `PROJECTS_TOKEN`; until then the job is
+# a no-op. See docs/project-management.md.
+on:
+  issues:
+    types: [labeled]
+
+env:
+  PROJECT_OWNER: dalberola
+  PROJECT_NUMBER: "2"
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    if: ${{ startsWith(github.event.label.name, 'lane:') }}
+    steps:
+      - name: Mirror lane label to the board
+        env:
+          HAS_TOKEN: ${{ secrets.PROJECTS_TOKEN != '' }}
+        if: ${{ env.HAS_TOKEN == 'true' }}
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.PROJECTS_TOKEN }}
+          script: |
+            const label = context.payload.label.name; // e.g. "lane:in-progress"
+            const laneName = label
+              .slice("lane:".length)
+              .split("-")
+              .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+              .join(" "); // "in-progress" -> "In Progress"
+
+            const owner = process.env.PROJECT_OWNER;
+            const number = parseInt(process.env.PROJECT_NUMBER, 10);
+
+            // Resolve the project, the Lane field, and the option id for this lane.
+            const q = await github.graphql(
+              `query($owner:String!, $number:Int!) {
+                 user(login:$owner) {
+                   projectV2(number:$number) {
+                     id
+                     field(name:"Lane") {
+                       ... on ProjectV2SingleSelectField { id options { id name } }
+                     }
+                   }
+                 }
+               }`,
+              { owner, number },
+            );
+            const project = q.user.projectV2;
+            const field = project.field;
+            const option = field.options.find((o) => o.name === laneName);
+            if (!option) {
+              core.setFailed(`No board Lane option named "${laneName}"`);
+              return;
+            }
+
+            // Add the issue to the board (idempotent) and set its Lane field.
+            const added = await github.graphql(
+              `mutation($project:ID!, $content:ID!) {
+                 addProjectV2ItemById(input:{projectId:$project, contentId:$content}) {
+                   item { id }
+                 }
+               }`,
+              { project: project.id, content: context.payload.issue.node_id },
+            );
+            const itemId = added.addProjectV2ItemById.item.id;
+
+            await github.graphql(
+              `mutation($project:ID!, $item:ID!, $field:ID!, $opt:String!) {
+                 updateProjectV2ItemFieldValue(input:{
+                   projectId:$project, itemId:$item, fieldId:$field,
+                   value:{ singleSelectOptionId:$opt }
+                 }) { projectV2Item { id } }
+               }`,
+              { project: project.id, item: itemId, field: field.id, opt: option.id },
+            );
+
+            core.info(`#${context.payload.issue.number} -> Lane="${laneName}"`);
