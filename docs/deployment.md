@@ -110,3 +110,12 @@ bulk abuse.
   version so instances don't race. See [development.md](development.md#migrations).
 - The token reaper deletes expired rows on an interval (`REAP_INTERVAL_MINUTES`) —
   MariaDB has no TTL index.
+
+## Graceful shutdown
+
+On `SIGTERM`/`SIGINT` the server stops the reaper, closes the HTTP listener (stops
+accepting new connections and drains in-flight requests), closes the DB pool, and
+exits 0. A bounded timer (8s) force-exits if a connection hangs. Ensure the
+orchestrator's stop grace period is **≥ 8s** (Docker's default `docker stop`
+timeout is 10s; in Kubernetes set `terminationGracePeriodSeconds` accordingly) so
+the process finishes draining before `SIGKILL`.

@@ -9,6 +9,13 @@ All notable changes to this project are documented here. Format loosely follows
 _Track in-flight work via [issues](https://github.com/dalberola/auth-preferences-service/issues)
 and [milestones](https://github.com/dalberola/auth-preferences-service/milestones)._
 
+### Added
+- **Graceful shutdown** ([#26](https://github.com/dalberola/auth-preferences-service/issues/26)):
+  on `SIGTERM`/`SIGINT` the server stops the reaper, closes the HTTP listener
+  (draining in-flight requests), closes the DB pool, and exits — with an 8s
+  force-exit fallback. Containers now stop cleanly instead of being killed
+  mid-request.
+
 ### Documentation
 - Refreshed the README **Future work** section: its three items (cross-origin
   refresh-token transport, password-reset token type, production Dockerfile) all
