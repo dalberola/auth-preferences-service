@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import request from "supertest";
 import mysql from "mysql2/promise";
+import jwt from "jsonwebtoken";
 import type { Express } from "express";
 
 // Capture the raw tokens instead of sending real emails.
@@ -373,6 +374,40 @@ describe("token reaper", () => {
     expect(await rt.findOneBy({ id: liveR.id })).not.toBeNull();
     expect(await vt.findOneBy({ id: expiredV.id })).toBeNull();
     expect(await vt.findOneBy({ id: liveV.id })).not.toBeNull();
+  });
+});
+
+describe("access-token secret rotation", () => {
+  it("accepts a token signed with the previous secret during a rotation overlap", async () => {
+    const addr = "rotation@example.com";
+    await registerAndVerify(addr);
+    const { accessToken } = await loginTokens(addr);
+    const sub = (jwt.decode(accessToken) as { sub: string }).sub;
+
+    // A token the old secret would have signed must still be accepted.
+    const prev = process.env.JWT_ACCESS_SECRET_PREVIOUS as string;
+    const prevToken = jwt.sign({}, prev, {
+      algorithm: "HS256",
+      subject: sub,
+      expiresIn: "15m",
+    });
+
+    await request(app)
+      .get("/me/preferences")
+      .set("Authorization", `Bearer ${prevToken}`)
+      .expect(200);
+  });
+
+  it("rejects a token signed with an unknown secret", async () => {
+    const bad = jwt.sign({}, "u".repeat(40), {
+      algorithm: "HS256",
+      subject: "00000000-0000-4000-8000-000000000009",
+      expiresIn: "15m",
+    });
+    await request(app)
+      .get("/me/preferences")
+      .set("Authorization", `Bearer ${bad}`)
+      .expect(401);
   });
 });
 

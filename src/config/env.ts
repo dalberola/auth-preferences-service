@@ -34,6 +34,11 @@ const schema = z.object({
   DB_NAME: z.string().min(1),
 
   JWT_ACCESS_SECRET: z.string().min(32),
+  // Optional: the previous access secret, honored only for *verifying* tokens
+  // during a rotation overlap. Set it to the old secret while rotating
+  // `JWT_ACCESS_SECRET`, then remove it once all old tokens have expired
+  // (≤ ACCESS_TTL). New tokens are always signed with `JWT_ACCESS_SECRET`.
+  JWT_ACCESS_SECRET_PREVIOUS: z.string().min(32).optional(),
   ACCESS_TTL: z.string().default("15m"),
   REFRESH_TTL_DAYS: z.coerce.number().int().positive().default(14),
   // Per-account login lockout: lock after this many consecutive failures, for

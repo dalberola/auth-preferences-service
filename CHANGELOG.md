@@ -9,6 +9,14 @@ All notable changes to this project are documented here. Format loosely follows
 _Track in-flight work via [issues](https://github.com/dalberola/auth-preferences-service/issues)
 and [milestones](https://github.com/dalberola/auth-preferences-service/milestones)._
 
+### Added
+- **Zero-downtime access-secret rotation**
+  ([#35](https://github.com/dalberola/auth-preferences-service/issues/35)): an
+  optional `JWT_ACCESS_SECRET_PREVIOUS` is accepted on verify during a rotation
+  overlap, so rotating `JWT_ACCESS_SECRET` no longer invalidates live access tokens.
+  New tokens are always signed with the current secret. Runbook in
+  `docs/deployment.md`.
+
 ## [1.2.0] - 2026-06-25
 
 ### Security
