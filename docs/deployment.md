@@ -53,12 +53,14 @@ Inject secrets from a managed store (cloud secret manager, Vault, orchestrator
 secrets) as environment variables — never bake them into the image or commit them.
 Required: `JWT_ACCESS_SECRET`, `DB_PASSWORD`, and any `SMTP_*` credentials.
 
-- **`JWT_ACCESS_SECRET`** signs/verifies access JWTs (HS256, `lib/jwt.ts`).
-  Rotating it invalidates every outstanding access token immediately; clients
-  recover transparently on their next `/auth/refresh` (refresh tokens are opaque
-  DB records, unaffected). Disruption is bounded by `ACCESS_TTL` (default 15m).
-  For zero-downtime rotation, support verifying against both the old and new secret
-  during a short overlap (not yet built).
+- **`JWT_ACCESS_SECRET`** signs/verifies access JWTs (HS256, `lib/jwt.ts`). New
+  tokens are always signed with it; refresh tokens are opaque DB records, unaffected.
+  **Zero-downtime rotation:** set `JWT_ACCESS_SECRET_PREVIOUS` to the *current*
+  secret, then set `JWT_ACCESS_SECRET` to the *new* one. Verification accepts either,
+  so live tokens keep working; once the overlap exceeds `ACCESS_TTL` (default 15m)
+  every old token has expired — remove `JWT_ACCESS_SECRET_PREVIOUS`. Skipping the
+  overlap (rotating `JWT_ACCESS_SECRET` alone) still works but forces every client
+  to re-`/auth/refresh`.
 - Refresh tokens are **opaque random values stored as sha256 hashes**, not JWTs, so
   there is no refresh-signing secret to rotate.
 

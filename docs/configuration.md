@@ -29,6 +29,7 @@ docker-compose loads both files, each optional, `.env.local` last.
 | `DB_PASSWORD` | no | `""` | MariaDB password |
 | `DB_NAME` | **yes** | — | database name, e.g. `auth_preferences` |
 | `JWT_ACCESS_SECRET` | **yes** | — | ≥ 32 chars; `openssl rand -hex 32` |
+| `JWT_ACCESS_SECRET_PREVIOUS` | no | — | old secret accepted on verify during a rotation overlap; ≥ 32 chars |
 | `ACCESS_TTL` | no | `15m` | zeit/ms format for the access JWT |
 | `REFRESH_TTL_DAYS` | no | `14` | refresh-token lifetime in days |
 | `LOGIN_MAX_ATTEMPTS` | no | `5` | consecutive failed logins before a per-account lock |

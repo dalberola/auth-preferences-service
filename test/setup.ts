@@ -9,6 +9,7 @@ process.env.DB_USER ??= "root";
 process.env.DB_PASSWORD ??= "root";
 process.env.DB_NAME ??= "auth_preferences_test";
 process.env.JWT_ACCESS_SECRET = "test-access-secret-that-is-long-enough-xx";
+process.env.JWT_ACCESS_SECRET_PREVIOUS = "test-previous-access-secret-long-enough-x";
 process.env.ACCESS_TTL = "15m";
 process.env.REFRESH_TTL_DAYS = "14";
 process.env.SMTP_HOST = "localhost";
