@@ -1,9 +1,10 @@
 # Exercises the production image locally. NOT a deployment manifest.
 #
-# NODE_ENV=production disables TypeORM schema auto-sync, so until migrations land
-# (#5) the schema must be created out-of-band before the app can serve requests.
-# Real deployments supply their own managed MariaDB and SMTP via environment; the
-# bundled mariadb/mailpit here exist only to run the image end-to-end on a laptop.
+# NODE_ENV=production disables TypeORM schema auto-sync; the app runs pending
+# migrations automatically on startup instead (migrationsRun), so the schema is
+# created on first boot against an empty database. Real deployments supply their
+# own managed MariaDB and SMTP via environment; the bundled mariadb/mailpit here
+# exist only to run the image end-to-end on a laptop.
 #
 #   docker compose -f compose.prod.yml up --build
 services:

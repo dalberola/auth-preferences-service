@@ -14,7 +14,12 @@
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "typeorm": "node --import tsx ./node_modules/typeorm/cli.js",
+    "migration:generate": "npm run typeorm -- migration:generate -d src/db/data-source.ts",
+    "migration:run": "npm run typeorm -- migration:run -d src/db/data-source.ts",
+    "migration:revert": "npm run typeorm -- migration:revert -d src/db/data-source.ts",
+    "migration:show": "npm run typeorm -- migration:show -d src/db/data-source.ts"
   },
   "dependencies": {
     "argon2": "^0.44.0",

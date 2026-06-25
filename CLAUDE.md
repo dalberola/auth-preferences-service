@@ -102,7 +102,19 @@ docs/                  architecture · api · configuration · development · se
   is listening — check logs / `curl /health`. After fixing a startup failure the
   app may need `docker compose restart app`.
 - **`.env.local` precedence**: `process.env` > `.env.local` > `.env`. dotenv never
-  overrides already-set keys, so docker-compose-injected vars win.
+  overrides already-set keys, so docker-compose-injected vars win. Note `docker run
+  --env-file .env.local` is **not** dotenv: it keeps literal quotes (a quoted
+  `MAIL_FROM` breaks the SMTP envelope) and will happily override the image's baked
+  `NODE_ENV=production` with the file's `NODE_ENV=development`. Force overrides with
+  explicit `-e` when smoke-testing the prod image.
+- **Schema: `synchronize` in dev/test, migrations in prod.** `db/data-source.ts`
+  sets `synchronize: NODE_ENV !== "production"` and `migrationsRun: NODE_ENV ===
+  "production"`, so the prod image creates/updates its schema from
+  `dist/migrations/*.js` on startup. After changing an entity, run `npm run
+  migration:generate -- src/migrations/<Name>` (TypeORM CLI via `tsx`) and commit
+  it. The `migrations` glob is **skipped under `NODE_ENV=test`** — Vitest workers
+  import glob matches through Node's loader, which can't resolve the `.ts` sources
+  (`Unknown file extension ".ts"`); tests build schema from entities anyway.
 
 ## Project tracking (GitHub is the source of truth)
 
