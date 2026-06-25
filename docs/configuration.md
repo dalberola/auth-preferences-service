@@ -32,6 +32,8 @@ docker-compose loads both files, each optional, `.env.local` last.
 | `JWT_REFRESH_SECRET` | **yes** | — | ≥ 32 chars; **different** from access |
 | `ACCESS_TTL` | no | `15m` | zeit/ms format for the access JWT |
 | `REFRESH_TTL_DAYS` | no | `14` | refresh-token lifetime in days |
+| `LOGIN_MAX_ATTEMPTS` | no | `5` | consecutive failed logins before a per-account lock |
+| `LOGIN_LOCK_MINUTES` | no | `15` | how long an account stays locked |
 | `REAP_INTERVAL_MINUTES` | no | `60` | how often the reaper deletes expired tokens |
 | `REFRESH_TOKEN_TRANSPORT` | no | `cookie` | `cookie` (httpOnly cookie) or `body` (JSON body) — see security.md |
 | `SMTP_HOST` | **yes** | — | `mailpit` in compose |

@@ -96,14 +96,50 @@ async function issueRefreshToken(
   return { raw, expiresAt };
 }
 
+function isLocked(user: User): boolean {
+  return user.lockedUntil !== null && user.lockedUntil.getTime() > Date.now();
+}
+
+/**
+ * Record a failed login. A lock whose window has already passed resets the count
+ * (fresh start); otherwise failures accumulate and crossing the threshold sets a
+ * fresh lock window.
+ */
+async function recordFailedLogin(user: User): Promise<void> {
+  const lockExpired =
+    user.lockedUntil !== null && user.lockedUntil.getTime() <= Date.now();
+  const attempts = (lockExpired ? 0 : user.failedLoginAttempts) + 1;
+  const locked = attempts >= env.LOGIN_MAX_ATTEMPTS;
+  await users().update(user.id, {
+    failedLoginAttempts: attempts,
+    lockedUntil: locked
+      ? new Date(Date.now() + env.LOGIN_LOCK_MINUTES * 60_000)
+      : null,
+  });
+}
+
 export async function login(input: LoginInput): Promise<IssuedTokens> {
   const email = input.email.toLowerCase();
   const user = await users().findOne({ where: { email } });
+
+  // An active lock fails closed with the same generic error as bad credentials,
+  // so it reveals neither that the account exists nor that it is locked.
+  if (user && isLocked(user)) {
+    throw unauthorized("INVALID_CREDENTIALS", "Invalid email or password");
+  }
+
   const ok = user && (await verifyPassword(user.passwordHash, input.password));
 
   if (!user || !ok) {
+    if (user) await recordFailedLogin(user);
     throw unauthorized("INVALID_CREDENTIALS", "Invalid email or password");
   }
+
+  // Correct credentials clear any accumulated failures / expired lock.
+  if (user.failedLoginAttempts > 0 || user.lockedUntil !== null) {
+    await users().update(user.id, { failedLoginAttempts: 0, lockedUntil: null });
+  }
+
   if (!user.emailVerified) {
     throw forbidden("EMAIL_NOT_VERIFIED", "Email address is not verified");
   }

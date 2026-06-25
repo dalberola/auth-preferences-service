@@ -115,6 +115,10 @@ docs/                  architecture · api · configuration · development · se
   it. The `migrations` glob is **skipped under `NODE_ENV=test`** — Vitest workers
   import glob matches through Node's loader, which can't resolve the `.ts` sources
   (`Unknown file extension ".ts"`); tests build schema from entities anyway.
+  Generate against a DB with prior migrations applied (not the `synchronize`-mutated
+  dev DB), and **review the diff** — TypeORM perpetually re-suggests no-op `CHANGE`
+  statements for nullable `datetime`/`varchar` columns on MariaDB (their `down` even
+  adds a bogus `DEFAULT 'NULL'`); keep only the intended changes.
 
 ## Project tracking (GitHub is the source of truth)
 

@@ -27,6 +27,12 @@ and [milestones](https://github.com/dalberola/auth-preferences-service/milestone
   `true` / preset / CSV IP list) instead of the hardcoded `1`, so client-IP rate
   limiting and `Secure`-cookie decisions are correct behind real proxies;
   `SMTP_SECURE` enables implicit TLS (SMTPS, port 465) for real mail providers.
+- **Per-account login lockout** ([#5](https://github.com/dalberola/auth-preferences-service/issues/5)):
+  after `LOGIN_MAX_ATTEMPTS` (default 5) consecutive failures an account locks for
+  `LOGIN_LOCK_MINUTES` (default 15), complementing the per-IP rate limiter. A
+  correct login clears the counter; an elapsed lock auto-resets. While locked,
+  login returns the same generic `INVALID_CREDENTIALS` (no enumeration). Adds the
+  `failedLoginAttempts` / `lockedUntil` columns via migration.
 
 ## [0.3.0] - 2026-06-24
 
