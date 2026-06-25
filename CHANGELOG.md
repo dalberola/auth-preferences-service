@@ -9,6 +9,13 @@ All notable changes to this project are documented here. Format loosely follows
 _Track in-flight work via [issues](https://github.com/dalberola/auth-preferences-service/issues)
 and [milestones](https://github.com/dalberola/auth-preferences-service/milestones)._
 
+### Documentation
+- Refreshed the README **Future work** section: its three items (cross-origin
+  refresh-token transport, password-reset token type, production Dockerfile) all
+  shipped in v0.3.0/v1.0.0. Replaced them with the genuinely-open directions from
+  the deployment runbook (shared rate-limit store, zero-downtime secret rotation,
+  CAPTCHA on register).
+
 ## [1.0.0] - 2026-06-25
 
 ### Added
