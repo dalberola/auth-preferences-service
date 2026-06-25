@@ -2,6 +2,16 @@ node_modules
 dist
 coverage
 .git
-.env
+.github
+.idea
+.claude
+docs
+test
+*.md
+.env*
+!.env.example
 *.log
 .DS_Store
+Dockerfile*
+docker-compose*.yml
+compose*.yml
