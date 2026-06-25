@@ -147,10 +147,22 @@ and must keep them updated. See [docs/project-management.md](docs/project-manage
 
 ## Status
 
-Repo: **github.com/dalberola/auth-preferences-service** (private). `main` is the
+Repo: **github.com/dalberola/auth-preferences-service** (public). `main` is the
 default branch and is pushed. Baseline tagged `v0.1.0`; current release **v1.3.0**
 (production image, TypeORM migrations, trust-proxy/SMTP-TLS config, login lockout,
 deployment runbook, graceful shutdown, log redaction, login-timing hardening,
-zero-downtime access-secret rotation). The refresh cookie suits a
-same-origin web client; a cross-origin browser-extension consumer would move the
-refresh token to the response body + extension storage (tracked as an issue).
+zero-downtime access-secret rotation).
+
+**Deployed to production** (milestone v1.4.0, [#43](https://github.com/dalberola/auth-preferences-service/issues/43)
+done): live at **https://auth.diginaut.es** on **Infomaniak shared hosting**
+(managed Node.js site via the Node.js Builder — clones the public repo, builds on
+boosted infra; **not** the Docker image, **not** SSH file-deploy). Consumer is the
+tabliss site at `https://diginaut.es`. Runtime env is a host-side `.env` in the
+execution folder; build is `npm ci && npm run build`; migrations run on boot. The
+full register→verify→login→preferences flow is verified live, and the refresh
+**cookie** works cross-subdomain (same-site `SameSite=Lax`, `Secure`). See
+[docs/deployment.md](docs/deployment.md#live-production-infomaniak-shared-hosting-authdiginautes)
+for the Manager config and the Infomaniak-specific gotchas (the
+`npm run install` ≠ `npm install` trap, dotenv password-quoting, managed-DB remote
+access). Next in v1.4.0: reCAPTCHA v3 ([#36](https://github.com/dalberola/auth-preferences-service/issues/36),
+`lane:ready`).

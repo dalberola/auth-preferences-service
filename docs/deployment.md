@@ -18,6 +18,73 @@ locally against bundled MariaDB/Mailpit.
 Real deployments provide their own managed **MariaDB** and **SMTP**, and inject
 configuration via the environment (see [configuration.md](configuration.md)).
 
+## Live production: Infomaniak shared hosting (auth.diginaut.es)
+
+The actual production instance runs on **Infomaniak shared hosting** as a managed
+**Node.js site** — built and run by Infomaniak's **Node.js Builder**, **not** the
+Docker image and **not** an SSH file-deploy. The consumer is the maintainer's
+tabliss site at `https://diginaut.es`. The `Dockerfile`/`compose.prod.yml` remain
+for other (container) targets only.
+
+**Why not the other mechanisms:** Infomaniak shared hosting refuses inbound SSH
+**key** auth (password-only) and caps SSH CPU/RAM, so neither an agent-driven SSH
+deploy nor a GitHub-Actions-over-SSH deploy works. Instead Infomaniak clones the
+(public) GitHub repo and builds it on boosted infra.
+
+### Manager configuration (Node.js site)
+
+| Field | Value | Notes |
+| --- | --- | --- |
+| Node.js version | **24** | matches `engines` (`>=24`) |
+| Execution Folder | **`./`** | repo root (has `package.json`) |
+| Build Command | **`npm ci && npm run build`** | see gotcha below |
+| Start Command | **`npm start`** | → `node dist/server.js` |
+| Listening port | **injected** | Infomaniak sets `PORT`; the app reads it (`server.ts`). Do **not** set `PORT` in `.env`. |
+
+Source is the public GitHub repo (branch `main`); build/start/restart and the live
+logs are driven from the Manager dashboard (Build console + Execution console).
+
+### Gotchas (learned deploying this)
+
+- **`npm run install` is not `npm install`.** Infomaniak's default build command
+  `npm run install && npm run build` runs an `install` *script* (which this repo
+  doesn't have) — so it installs **nothing**, and the runtime boots with no
+  `node_modules` → `ERR_MODULE_NOT_FOUND` for `reflect-metadata`/`dotenv`. Use
+  **`npm ci && npm run build`**. (`dist/` and `node_modules` are both absent from a
+  fresh clone — the build must produce them on every deploy.)
+- **Env vars live in a host-side `.env`, not in GitHub.** GitHub Actions
+  secrets/variables are invisible to Infomaniak (it only `git clone`s the files).
+  Put runtime config in a **`.env` in the execution folder**; the app loads it via
+  dotenv, and it's git-ignored so a git-pull deploy never clobbers it.
+- **Single-quote secret values in `.env`.** dotenv treats an unquoted `#` as an
+  inline comment and trims spaces, silently **truncating** a password
+  (`DB_PASSWORD='…'`, `SMTP_PASS='…'`). A truncated password surfaces as MariaDB
+  `ER_ACCESS_DENIED_ERROR (1045)` even though the value "looks right".
+- **Managed MariaDB needs remote access.** The app connects from Infomaniak's
+  egress gateway (`egress-gateway-prod-01.infomaniak.ch`), so the DB user must be
+  granted for it (enable remote access / host `%` in the Manager → Databases). The
+  DB host is `<id>.myd.infomaniak.com:3306`.
+- **A green `npm start` ≠ serving.** Until the app listens on the injected `PORT`,
+  Infomaniak serves an Express "under maintenance" placeholder (`/health` 301→
+  `/health/`). A live app returns `200 {"status":"ok"}` at `/health`.
+
+### Production env (canonical vars)
+
+`NODE_ENV=production`, `TRUST_PROXY=1`, managed MariaDB `DB_*`, a **fresh**
+`JWT_ACCESS_SECRET` (not reused from dev), SMTP `mail.infomaniak.com:587` with
+`SMTP_SECURE=false` (STARTTLS), `MAIL_FROM="Diginaut <hello@diginaut.es>"`,
+`APP_URL=https://auth.diginaut.es`, `CLIENT_URL=https://diginaut.es`,
+`REFRESH_TOKEN_TRANSPORT=cookie`. TLS is terminated by Infomaniak, so
+`NODE_ENV=production` makes the refresh cookie `Secure`; `diginaut.es` ↔
+`auth.diginaut.es` are **same-site**, so `SameSite=Lax` is sent on the consumer's
+credentialed requests (verified live).
+
+### Deploying an update
+
+Push to `main`, then in the Manager: run **Build** (re-clones + `npm ci && npm run
+build`) and **Restart**. Migrations run automatically on the production boot
+(`migrationsRun`).
+
 ## Hardening checklist
 
 | Item | Status | Where |
