@@ -12,6 +12,7 @@ import {
   sendVerificationEmail,
 } from "../../lib/mailer.js";
 import { forbidden, unauthorized } from "../../lib/errors.js";
+import { CONSENT_VERSION } from "./consent.js";
 import type { LoginInput, RegisterInput } from "./validators.js";
 
 const VERIFY_TTL_MS = 24 * 60 * 60 * 1000;
@@ -53,10 +54,21 @@ export async function register(input: RegisterInput): Promise<void> {
   const repo = users();
   const existing = await repo.findOne({ where: { email } });
 
+  // Record which legal-terms version was accepted (client-reported, else the
+  // server's current version) and when — proof of consent (GDPR).
+  const consentVersion = input.consentVersion ?? CONSENT_VERSION;
+  const consentAt = new Date();
+
   if (!existing) {
     const passwordHash = await hashPassword(input.password);
     const user = await repo.save(
-      repo.create({ email, passwordHash, preferences: defaultPreferences() }),
+      repo.create({
+        email,
+        passwordHash,
+        preferences: defaultPreferences(),
+        consentVersion,
+        consentAt,
+      }),
     );
     await issueVerification(user.id, email);
     return;
@@ -64,6 +76,8 @@ export async function register(input: RegisterInput): Promise<void> {
 
   // Resend for an account that exists but never verified; verified accounts no-op.
   if (!existing.emailVerified) {
+    // The user re-accepted the terms on this submission — record the latest.
+    await repo.update(existing.id, { consentVersion, consentAt });
     await issueVerification(existing.id, email);
   }
 }
