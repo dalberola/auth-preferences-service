@@ -50,6 +50,14 @@ neutral errors so an attacker cannot probe which emails are registered or verifi
 - `cors` is an **allowlist** of exactly `CLIENT_URL`, with credentials enabled.
 - JSON body capped at 100kb.
 
+## Logging
+HTTP request logging (`pino-http`) **redacts** secrets so they never reach logs:
+the `Authorization` header (access JWT) and `Cookie` header (refresh token) on
+requests, the `Set-Cookie` response header (refresh token), and the verification
+`token` — which pino-http records in both the raw URL and the parsed `query`. The
+redaction set lives in `lib/logger.ts` (`redactOptions`); `test/logging.test.ts`
+guards it.
+
 ## Rate limiting
 `express-rate-limit`: `/auth/*` 20 req / 15 min, `/me/*` 100 req / 15 min
 (`lib`/`middleware/rateLimit.ts`; disabled under `NODE_ENV=test`). This is
