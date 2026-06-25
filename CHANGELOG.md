@@ -9,6 +9,15 @@ All notable changes to this project are documented here. Format loosely follows
 _Track in-flight work via [issues](https://github.com/dalberola/auth-preferences-service/issues)
 and [milestones](https://github.com/dalberola/auth-preferences-service/milestones)._
 
+### Added
+- **Production Docker image** ([#4](https://github.com/dalberola/auth-preferences-service/issues/4)):
+  multi-stage `Dockerfile` (build → prod-deps → runtime) that compiles to `dist/`,
+  installs production-only dependencies (`npm ci --omit=dev`), runs as the non-root
+  `node` user, and starts `node dist/server.js` with `NODE_ENV=production` and a
+  `/health` HEALTHCHECK. `compose.prod.yml` runs the image locally against bundled
+  MariaDB/Mailpit. Note: `NODE_ENV=production` disables TypeORM schema auto-sync —
+  migrations land in [#5](https://github.com/dalberola/auth-preferences-service/issues/5).
+
 ## [0.3.0] - 2026-06-24
 
 ### Changed

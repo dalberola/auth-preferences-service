@@ -28,6 +28,34 @@ npm run lint       # eslint
 npm test           # vitest
 ```
 
+## Production image
+
+`Dockerfile` is a multi-stage production build, distinct from `Dockerfile.dev`:
+
+1. **build** — `npm ci` + `npm run build` (`tsc` → `dist/`).
+2. **prod-deps** — `npm ci --omit=dev` for a dev-dependency-free `node_modules`
+   (same glibc base as runtime, so the native `argon2` binary is compatible).
+3. **runtime** — copies `dist/` + production `node_modules`, runs as the non-root
+   `node` user, `NODE_ENV=production`, and `node dist/server.js`. A `HEALTHCHECK`
+   polls `GET /health` via Node's global `fetch`.
+
+```bash
+docker build -t auth-preferences-service:prod .
+```
+
+`compose.prod.yml` runs the built image end-to-end against bundled MariaDB and
+Mailpit (JWT secrets read from `.env.local`):
+
+```bash
+docker compose -f compose.prod.yml up --build
+```
+
+> **Schema:** `NODE_ENV=production` disables TypeORM's `synchronize`, so the prod
+> image does **not** auto-create tables. Until migrations land
+> ([#5](https://github.com/dalberola/auth-preferences-service/issues/5)) the schema
+> must be created out-of-band. Real deployments supply their own managed MariaDB
+> and SMTP via environment rather than the bundled services.
+
 ## Testing
 
 The suite covers the end-to-end pass (register → verify → login → preferences →
