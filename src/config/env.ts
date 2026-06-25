@@ -34,7 +34,6 @@ const schema = z.object({
   DB_NAME: z.string().min(1),
 
   JWT_ACCESS_SECRET: z.string().min(32),
-  JWT_REFRESH_SECRET: z.string().min(32),
   ACCESS_TTL: z.string().default("15m"),
   REFRESH_TTL_DAYS: z.coerce.number().int().positive().default(14),
   // Per-account login lockout: lock after this many consecutive failures, for

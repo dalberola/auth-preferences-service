@@ -12,11 +12,11 @@ runs entirely in Docker.
 ## Quick start
 
 ```bash
-cp .env.example .env.local    # then set JWT_ACCESS_SECRET / JWT_REFRESH_SECRET
+cp .env.example .env.local    # then set JWT_ACCESS_SECRET
 docker compose up --build
 ```
 
-> Generate secrets: `openssl rand -hex 32` (two different values, ≥ 32 chars).
+> Generate the secret: `openssl rand -hex 32` (≥ 32 chars).
 > Config precedence: **`process.env` > `.env.local` > `.env`** (both files
 > optional). Real secrets go in `.env.local` — git-ignored, never committed.
 

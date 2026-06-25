@@ -5,7 +5,7 @@ Dev runs in Docker: `app` (tsx watch) + `mariadb` + `mailpit`.
 ## Start
 
 ```bash
-cp .env.example .env.local      # set the two JWT secrets
+cp .env.example .env.local      # set JWT_ACCESS_SECRET
 docker compose up --build
 ```
 

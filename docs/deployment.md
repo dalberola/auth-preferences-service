@@ -59,10 +59,8 @@ Required: `JWT_ACCESS_SECRET`, `DB_PASSWORD`, and any `SMTP_*` credentials.
   DB records, unaffected). Disruption is bounded by `ACCESS_TTL` (default 15m).
   For zero-downtime rotation, support verifying against both the old and new secret
   during a short overlap (not yet built).
-- **`JWT_REFRESH_SECRET`** is currently **required by config but unused** — refresh
-  tokens are opaque random values stored as sha256 hashes, not JWTs, so rotating it
-  has no effect. Tracked in
-  [#21](https://github.com/dalberola/auth-preferences-service/issues/21).
+- Refresh tokens are **opaque random values stored as sha256 hashes**, not JWTs, so
+  there is no refresh-signing secret to rotate.
 
 ## Email deliverability
 
