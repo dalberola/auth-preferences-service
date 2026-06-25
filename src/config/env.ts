@@ -12,6 +12,20 @@ const schema = z.object({
     .enum(["development", "test", "production"])
     .default("development"),
   PORT: z.coerce.number().int().positive().default(4000),
+  // Express `trust proxy` setting. Controls which `X-Forwarded-*` headers are
+  // honoured (client IP for rate limiting, `Secure` cookie decisions). Set to the
+  // number of proxy hops in front of the app (`1` for a single LB/ingress), or
+  // `false` when there is no proxy, `true` to trust all, or an Express preset /
+  // comma-separated IP/subnet list.
+  TRUST_PROXY: z
+    .string()
+    .default("1")
+    .transform((v) => {
+      if (v === "true") return true;
+      if (v === "false") return false;
+      if (/^\d+$/.test(v)) return Number(v);
+      return v;
+    }),
 
   DB_HOST: z.string().min(1),
   DB_PORT: z.coerce.number().int().positive().default(3306),
@@ -31,6 +45,13 @@ const schema = z.object({
 
   SMTP_HOST: z.string().min(1),
   SMTP_PORT: z.coerce.number().int().positive().default(1025),
+  // Implicit TLS on connect (SMTPS, typically port 465). Leave false for STARTTLS
+  // (ports 587/25) and for the Mailpit dev server; nodemailer still upgrades via
+  // STARTTLS when the server advertises it.
+  SMTP_SECURE: z
+    .enum(["true", "false"])
+    .default("false")
+    .transform((v) => v === "true"),
   SMTP_USER: z.string().optional(),
   SMTP_PASS: z.string().optional(),
   MAIL_FROM: z.string().min(1),

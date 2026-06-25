@@ -22,6 +22,7 @@ docker-compose loads both files, each optional, `.env.local` last.
 | --- | --- | --- | --- |
 | `NODE_ENV` | no | `development` | `development \| test \| production` |
 | `PORT` | no | `4000` | must be > 0 |
+| `TRUST_PROXY` | no | `1` | Express `trust proxy`: hop count, or `false`/`true`/preset/CSV IP list |
 | `DB_HOST` | **yes** | — | MariaDB host; `mariadb` in compose |
 | `DB_PORT` | no | `3306` | MariaDB port |
 | `DB_USER` | **yes** | — | MariaDB user |
@@ -35,6 +36,7 @@ docker-compose loads both files, each optional, `.env.local` last.
 | `REFRESH_TOKEN_TRANSPORT` | no | `cookie` | `cookie` (httpOnly cookie) or `body` (JSON body) — see security.md |
 | `SMTP_HOST` | **yes** | — | `mailpit` in compose |
 | `SMTP_PORT` | no | `1025` | Mailpit SMTP port |
+| `SMTP_SECURE` | no | `false` | implicit TLS (SMTPS, port 465); leave `false` for STARTTLS / Mailpit |
 | `SMTP_USER` | no | — | omit for Mailpit (no auth) |
 | `SMTP_PASS` | no | — | |
 | `MAIL_FROM` | **yes** | — | e.g. `Auth <no-reply@example.com>` |
