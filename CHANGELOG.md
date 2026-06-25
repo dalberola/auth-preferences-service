@@ -34,6 +34,13 @@ and [milestones](https://github.com/dalberola/auth-preferences-service/milestone
   login returns the same generic `INVALID_CREDENTIALS` (no enumeration). Adds the
   `failedLoginAttempts` / `lockedUntil` columns via migration.
 
+### Documentation
+- **Deployment & hardening runbook** (`docs/deployment.md`,
+  [#5](https://github.com/dalberola/auth-preferences-service/issues/5)): the
+  production-readiness checklist with implemented-vs-operator status and guidance
+  for TLS, secrets/rotation, SMTP + SPF/DKIM/DMARC, headers/CORS, CAPTCHA, and the
+  multi-instance rate-limiter caveat. Refreshed `security.md`'s hardening section.
+
 ## [0.3.0] - 2026-06-24
 
 ### Changed
