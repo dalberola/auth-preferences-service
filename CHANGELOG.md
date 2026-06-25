@@ -9,6 +9,14 @@ All notable changes to this project are documented here. Format loosely follows
 _Track in-flight work via [issues](https://github.com/dalberola/auth-preferences-service/issues)
 and [milestones](https://github.com/dalberola/auth-preferences-service/milestones)._
 
+### Security
+- **Redact credentials and tokens from request logs**
+  ([#29](https://github.com/dalberola/auth-preferences-service/issues/29)): the
+  default `pino-http` config logged the `Authorization`/`Cookie` request headers,
+  the `Set-Cookie` response header, and the verification `token` (in the URL and
+  parsed `query`) in plaintext. Added pino `redact` rules (`lib/logger.ts`) and a
+  regression test so these never reach logs.
+
 ## [1.1.0] - 2026-06-25
 
 ### Added
