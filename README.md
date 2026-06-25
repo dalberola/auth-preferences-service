@@ -99,8 +99,11 @@ docs/ · .claude/       documentation · Claude Code skills
 
 ## Future work
 
-- Refresh token is an httpOnly cookie (same-origin web client). A cross-origin
-  browser-extension consumer would move it to the response body + extension
-  storage — switch the transport in `modules/auth/controller.ts`.
-- Password reset reuses the `VerificationToken` model (add a `password_reset` type).
-- No production Dockerfile yet — dev image only.
+- **Shared rate-limit store** for horizontal scaling: the per-IP limiter uses an
+  in-memory store, so counters are per-process — back it with Redis to share across
+  replicas (account lockout is already DB-backed). See
+  [docs/deployment.md](docs/deployment.md).
+- **Zero-downtime secret rotation**: verify access JWTs against both the old and new
+  `JWT_ACCESS_SECRET` during a short overlap window.
+- **CAPTCHA on register** (and optionally forgot-password) to deter automated abuse —
+  a recommended add-on, not yet implemented.
