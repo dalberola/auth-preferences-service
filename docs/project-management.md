@@ -71,9 +71,28 @@ These are binding for maintainers and agents:
 
 ## Automation
 
-`.github/workflows/triage.yml` labels any issue opened without a `lane:*` label as
-`lane:needs-triage`, so nothing falls through. Issues created already in a lane are
-left untouched.
+- `.github/workflows/triage.yml` labels any issue opened without a `lane:*` label as
+  `lane:needs-triage`, so nothing falls through. Issues created already in a lane are
+  left untouched.
+- `.github/workflows/lane-sync.yml` mirrors a `lane:*` label onto the
+  [Project board](https://github.com/users/dalberola/projects/2)'s **Lane** field,
+  so the card follows the canonical label. It no-ops until the `PROJECTS_TOKEN`
+  secret exists (see below).
+
+## Board (optional visual layer)
+
+The labels are canonical. The [GitHub Project board](https://github.com/users/dalberola/projects/2)
+is a visual mirror with a **Lane** single-select field. To keep cards in sync with
+the labels automatically, the `lane-sync` workflow needs a token with `project`
+scope (the default `GITHUB_TOKEN` cannot write user-owned Projects v2):
+
+```bash
+# Create a PAT with project read/write (classic: `project` scope), then:
+gh secret set PROJECTS_TOKEN --repo dalberola/auth-preferences-service
+```
+
+In the project UI, set the **Board** layout's column field to **Lane** to get a
+kanban view, and optionally enable the built-in *Auto-add to project* workflow.
 
 ## Agent workflow
 
