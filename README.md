@@ -55,6 +55,7 @@ Full reference with curl examples and error codes: [docs/api.md](docs/api.md).
 | Data model & indexes | [docs/data-model.md](docs/data-model.md) |
 | Configuration | [docs/configuration.md](docs/configuration.md) |
 | Dev workflow & troubleshooting | [docs/development.md](docs/development.md) |
+| Deployment & hardening | [docs/deployment.md](docs/deployment.md) |
 | Security model | [docs/security.md](docs/security.md) |
 | Issues, milestones, releases, CI | [docs/project-management.md](docs/project-management.md) |
 

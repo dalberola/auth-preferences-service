@@ -70,10 +70,15 @@ Every request body/query is parsed with a Zod schema at the controller boundary;
 failures become `400 VALIDATION_ERROR`. The preferences schema is `strict` —
 unknown keys are rejected.
 
-## Production hardening (not yet done)
-- Serve over HTTPS only; ensure `NODE_ENV=production` so cookies are `Secure`.
-- Set `trust proxy` correctly for your proxy (currently `1`).
-- Move JWT secrets to a managed secret store; rotate periodically.
-- Add a real SMTP provider + SPF/DKIM/DMARC for deliverability.
-- Consider login throttling/lockout per-account and CAPTCHA on register.
-- Add a production Dockerfile (multi-stage, non-root, `npm ci --omit=dev`).
+## Production hardening
+Several controls above are in code: per-account lockout, the per-IP limiter, the
+production image, migrations-based schema, configurable `TRUST_PROXY`, and
+`SMTP_SECURE`. The remaining items are operator responsibilities (TLS termination,
+secrets in a managed store + rotation, real SMTP with SPF/DKIM/DMARC, CORS for prod
+origins) and a recommended CAPTCHA add-on.
+
+See the **[deployment runbook](deployment.md)** for the full checklist, what is
+implemented vs. operator-owned, and step-by-step guidance — including the
+multi-instance caveat that the IP limiter's store is in-memory (lockout is
+DB-backed), and the unused `JWT_REFRESH_SECRET`
+([#21](https://github.com/dalberola/auth-preferences-service/issues/21)).

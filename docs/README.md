@@ -10,4 +10,5 @@ Reference docs for **auth-preferences-service**. Start with the root
 | [data-model.md](data-model.md) | Collections, schemas, indexes, TTL |
 | [configuration.md](configuration.md) | Environment variables, precedence, secrets |
 | [development.md](development.md) | Docker workflow, scripts, testing, troubleshooting |
+| [deployment.md](deployment.md) | Production image, hardening checklist, operator runbook |
 | [security.md](security.md) | Threat model and the controls that address it |
