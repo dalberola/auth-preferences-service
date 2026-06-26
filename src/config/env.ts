@@ -47,6 +47,11 @@ const schema = z.object({
   LOGIN_LOCK_MINUTES: z.coerce.number().int().positive().default(15),
   // How often the background reaper deletes expired tokens (MariaDB has no TTL).
   REAP_INTERVAL_MINUTES: z.coerce.number().int().positive().default(60),
+  // Inactivity deletion (Privacy Policy): accounts whose `lastActiveAt` is older
+  // than this many months are purged by the reaper; a warning email goes out
+  // this many days before the cutoff. Runs in the same reaper tick.
+  INACTIVITY_PURGE_MONTHS: z.coerce.number().int().positive().default(12),
+  INACTIVITY_WARNING_DAYS: z.coerce.number().int().positive().default(30),
   // How the refresh token reaches the client: httpOnly cookie (same-origin web,
   // default) or the JSON response body (cross-origin / browser-extension clients).
   REFRESH_TOKEN_TRANSPORT: z.enum(["cookie", "body"]).default("cookie"),
