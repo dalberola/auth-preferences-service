@@ -84,6 +84,20 @@ reveals that the account exists or is locked (consistent with the enumeration
 posture above). Trade-off: an attacker who knows an address can keep it locked by
 forcing failures; the time-boxed auto-unlock bounds that denial of service.
 
+## Account deletion & data retention
+Both deletion paths remove the user row and cascade-delete the account's refresh
+and verification tokens in one transaction, so no orphaned tokens remain:
+- **Self-service** `DELETE /me` (`modules/account/`) — gated by a valid access JWT
+  and **idempotent**; clears the refresh cookie. It does **not** require password
+  re-entry, so a stolen short-lived access token can delete the account within its
+  TTL. Step-up auth is tracked as hardening in
+  [#52](https://github.com/dalberola/auth-preferences-service/issues/52).
+- **Inactivity purge** — the reaper deletes accounts whose `lastActiveAt` is older
+  than `INACTIVITY_PURGE_MONTHS` (default 12), emailing a warning
+  `INACTIVITY_WARNING_DAYS` (default 30) beforehand (Privacy Policy commitment).
+  `lastActiveAt` is refreshed on login **and** refresh; see
+  [data-model.md](data-model.md).
+
 ## Input validation
 Every request body/query is parsed with a Zod schema at the controller boundary;
 failures become `400 VALIDATION_ERROR`. The preferences schema is `strict` —
