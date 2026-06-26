@@ -38,6 +38,9 @@ docker-compose loads both files, each optional, `.env.local` last.
 | `INACTIVITY_PURGE_MONTHS` | no | `12` | delete accounts idle (no login/refresh) longer than this |
 | `INACTIVITY_WARNING_DAYS` | no | `30` | send a "sign in to keep your account" email this many days before the cutoff |
 | `REFRESH_TOKEN_TRANSPORT` | no | `cookie` | `cookie` (httpOnly cookie) or `body` (JSON body) — see security.md |
+| `RECAPTCHA_SECRET` | no | — | reCAPTCHA v3 secret; **blank disables** the check on register/forgot-password |
+| `RECAPTCHA_MIN_SCORE` | no | `0.5` | reject tokens scoring below this (0–1) when enabled |
+| `RECAPTCHA_VERIFY_URL` | no | Google siteverify | override only for tests/self-hosted proxies |
 | `SMTP_HOST` | **yes** | — | `mailpit` in compose |
 | `SMTP_PORT` | no | `1025` | Mailpit SMTP port |
 | `SMTP_SECURE` | no | `false` | implicit TLS (SMTPS, port 465); leave `false` for STARTTLS / Mailpit |

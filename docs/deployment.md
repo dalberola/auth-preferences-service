@@ -98,7 +98,7 @@ build`) and **Restart**. Migrations run automatically on the production boot
 | Secrets in a managed store + rotation | ⚙️ operator | inject env from a secret store |
 | Real SMTP + SPF/DKIM/DMARC | ⚙️ operator | mail provider + DNS |
 | Headers / CORS for prod origins | ⚙️ operator | `CLIENT_URL`, `TRUST_PROXY` |
-| CAPTCHA on register | ➕ recommended add-on | not implemented |
+| CAPTCHA on register | ✅ in code (opt-in) | set `RECAPTCHA_SECRET` to enable |
 
 ## TLS / HTTPS
 
@@ -163,13 +163,19 @@ password-reset mail is delivered, not spam-filtered:
   (e.g. Redis) for horizontal scaling. Account **lockout is DB-backed**, so it is
   already shared across instances.
 
-## CAPTCHA (recommended add-on)
+## CAPTCHA (reCAPTCHA v3 — opt-in)
 
-Not implemented. To deter automated account creation and reset-flooding, add a
-CAPTCHA / challenge (e.g. Turnstile, reCAPTCHA, hCaptcha) verified at the `register`
-(and optionally `forgot-password`) controller before the handler runs. The
-generic-202 responses already limit enumeration; a challenge raises the cost of
-bulk abuse.
+Implemented and **off by default**. `register` and `forgot-password` verify a
+reCAPTCHA v3 `captchaToken` server-side (`lib/recaptcha.ts`) before the handler
+runs, raising the cost of automated account creation and reset-flooding on top of
+the generic-202 responses, the per-IP limiter, and per-account lockout.
+
+To enable: set `RECAPTCHA_SECRET` (and tune `RECAPTCHA_MIN_SCORE`, default 0.5);
+the client must execute reCAPTCHA v3 with actions `register` / `forgot_password`
+and send the resulting token as `captchaToken`. A definitive failure returns
+`400 CAPTCHA_FAILED`; a provider outage fails open (see
+[security.md](security.md#bot-protection-captcha)). `RECAPTCHA_VERIFY_URL`
+overrides the siteverify endpoint for tests/self-hosted proxies.
 
 ## Database
 

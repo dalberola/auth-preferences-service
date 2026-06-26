@@ -26,6 +26,11 @@ Creates an unverified account and emails a verification link. Always returns the
 same generic response regardless of whether the email already exists (no
 enumeration). Password must be ≥ 12 characters.
 
+When `RECAPTCHA_SECRET` is configured, the body must also include a
+`captchaToken` (reCAPTCHA v3, action `register`); a missing or low-scoring token
+is rejected with `400 CAPTCHA_FAILED`. The field is ignored when CAPTCHA is
+disabled (the default).
+
 → `202 { "message": "If the email is valid, a verification link has been sent." }`
 
 ```bash
@@ -94,6 +99,9 @@ Issues a single-use password-reset token (1h TTL) and emails a reset link to
 `${CLIENT_URL}/reset-password?token=…`. Always generic regardless of whether the
 account exists (no enumeration). → `202`.
 
+Accepts an optional `captchaToken` (action `forgot_password`), enforced only when
+`RECAPTCHA_SECRET` is configured — `400 CAPTCHA_FAILED` on failure.
+
 ## `POST /auth/reset-password`
 
 ```json
@@ -154,6 +162,7 @@ stays valid until it expires; afterwards any authenticated `/me` request returns
 | --- | --- | --- |
 | `VALIDATION_ERROR` | 400 | Body/query failed Zod validation (`details` included) |
 | `MALFORMED_BODY` | 400 | Request body is not valid JSON |
+| `CAPTCHA_FAILED` | 400 | reCAPTCHA token missing, low-scoring, or rejected (when enabled) |
 | `INVALID_CREDENTIALS` | 401 | Wrong email/password (generic) |
 | `EMAIL_NOT_VERIFIED` | 403 | Login blocked until verification |
 | `INVALID_TOKEN` | 401 | Bad/expired verification, access, or refresh token |

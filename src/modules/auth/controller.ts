@@ -9,6 +9,7 @@ import {
   verifyQuerySchema,
 } from "./validators.js";
 import * as auth from "./service.js";
+import { requireCaptcha } from "../../lib/recaptcha.js";
 
 const REFRESH_COOKIE = "refresh_token";
 
@@ -60,7 +61,8 @@ function readRefreshToken(req: Request): string | undefined {
 }
 
 export async function register(req: Request, res: Response): Promise<void> {
-  const input = registerSchema.parse(req.body);
+  const { captchaToken, ...input } = registerSchema.parse(req.body);
+  await requireCaptcha(captchaToken, "register", req.ip);
   await auth.register(input);
   // Generic response regardless of whether the email already existed.
   res.status(202).json({
@@ -114,7 +116,8 @@ export async function forgotPassword(
   req: Request,
   res: Response,
 ): Promise<void> {
-  const { email } = forgotPasswordSchema.parse(req.body);
+  const { email, captchaToken } = forgotPasswordSchema.parse(req.body);
+  await requireCaptcha(captchaToken, "forgot_password", req.ip);
   await auth.requestPasswordReset(email);
   // Generic response regardless of whether the email exists.
   res.status(202).json({

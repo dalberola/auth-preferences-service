@@ -16,6 +16,9 @@ export const registerSchema = z.object({
   // The version of the legal pages the client displayed. Recorded against the
   // user; falls back to the server's current CONSENT_VERSION when omitted.
   consentVersion: z.string().min(1).max(32).optional(),
+  // reCAPTCHA v3 token from the client. Optional in the schema; presence is only
+  // enforced (in the controller) when RECAPTCHA_SECRET is configured.
+  captchaToken: z.string().optional(),
 });
 
 export const loginSchema = z.object({
@@ -33,6 +36,7 @@ export const verifyQuerySchema = z.object({
 
 export const forgotPasswordSchema = z.object({
   email: z.email(),
+  captchaToken: z.string().optional(),
 });
 
 export const resetPasswordSchema = z.object({
