@@ -6,6 +6,8 @@ import { pinoHttp } from "pino-http";
 import { env } from "./config/env.js";
 import { logger } from "./lib/logger.js";
 import { errorHandler } from "./middleware/errorHandler.js";
+import { apiLimiter } from "./middleware/rateLimit.js";
+import { requireAuth } from "./middleware/requireAuth.js";
 import { authRouter } from "./modules/auth/routes.js";
 import { meRouter } from "./modules/preferences/routes.js";
 import { accountRouter } from "./modules/account/routes.js";
@@ -30,8 +32,10 @@ export function createApp(): Express {
   });
 
   app.use("/auth", authRouter);
-  app.use("/me", meRouter);
-  app.use("/me", accountRouter);
+  // Both /me routers share one guard. Applying it here (rather than a `.use`
+  // inside each router) keeps it running exactly once even when a request falls
+  // through meRouter — which only owns /preferences — to accountRouter's DELETE.
+  app.use("/me", apiLimiter, requireAuth, meRouter, accountRouter);
 
   app.use(errorHandler);
   return app;
