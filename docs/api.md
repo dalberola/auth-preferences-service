@@ -132,6 +132,22 @@ curl -sX PUT localhost:4000/me/preferences \
   -d '{"theme":"dark","settings":{"widgetA":true}}'
 ```
 
+## `DELETE /me`  *(auth required)*
+
+Permanently deletes the authenticated account and cascade-deletes its refresh and
+verification tokens in one transaction. Clears the refresh cookie (cookie transport).
+**Idempotent** — a repeat call with a still-valid access token also returns `204`.
+
+→ `204` (no body)
+
+```bash
+curl -sX DELETE localhost:4000/me -H "authorization: Bearer $ACCESS" -i
+```
+
+Gated by the access token only (no password re-entry). The JWT is stateless, so it
+stays valid until it expires; afterwards any authenticated `/me` request returns
+`401 USER_NOT_FOUND`. Deletion is final — there is no recovery.
+
 ## Error codes
 
 | Code | Status | Meaning |

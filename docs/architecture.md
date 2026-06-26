@@ -12,7 +12,7 @@ Client ──HTTPS──> Express app
                     ├─ middleware: helmet · cors(allowlist) · json · cookieParser · pino-http · rateLimit
                     ├─ /health
                     ├─ /auth   register · verify · login · refresh · logout · resend-verification
-                    └─ /me     preferences (requireAuth)
+                    └─ /me     preferences · account deletion (requireAuth + rateLimit)
                           │
                           ├─ controller  (parse input, shape response)
                           ├─ service     (business logic, throws AppError)
