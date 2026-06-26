@@ -6,7 +6,33 @@ All notable changes to this project are documented here. Format loosely follows
 
 ## [Unreleased]
 
+_Track in-flight work via [issues](https://github.com/dalberola/auth-preferences-service/issues)
+and [milestones](https://github.com/dalberola/auth-preferences-service/milestones)._
+
+## [1.4.0] - 2026-06-26
+
+Production-launch milestone — the service is live at
+[auth.diginaut.es](https://auth.diginaut.es) on Infomaniak managed Node.js
+(see `docs/deployment.md`).
+
 ### Added
+- **Self-service account deletion**
+  ([#49](https://github.com/dalberola/auth-preferences-service/issues/49)):
+  `DELETE /me` permanently deletes the authenticated account and cascade-deletes
+  its refresh + verification tokens in one transaction, clears the refresh cookie,
+  and is idempotent (`204`). Access-token-gated; see `docs/api.md`.
+- **Inactivity account deletion**
+  ([#48](https://github.com/dalberola/auth-preferences-service/issues/48)):
+  accounts idle past `INACTIVITY_PURGE_MONTHS` (default 12) are purged by the
+  reaper, preceded by a warning email `INACTIVITY_WARNING_DAYS` (default 30)
+  before the cutoff. `lastActiveAt` is refreshed on login **and** token refresh.
+  Fulfils the Privacy Policy's auto-deletion commitment.
+- **reCAPTCHA v3 bot protection (opt-in)**
+  ([#36](https://github.com/dalberola/auth-preferences-service/issues/36)):
+  `register` and `forgot-password` verify a `captchaToken` server-side when
+  `RECAPTCHA_SECRET` is set (disabled by default). Definitive failures return
+  `400 CAPTCHA_FAILED`; provider outages fail open. Tunable via
+  `RECAPTCHA_MIN_SCORE` / `RECAPTCHA_VERIFY_URL`.
 - **Consent recording at registration**
   ([#45](https://github.com/dalberola/auth-preferences-service/issues/45)):
   `POST /auth/register` now requires `acceptedTerms: true` (registration is
@@ -16,8 +42,11 @@ All notable changes to this project are documented here. Format loosely follows
   `CONSENT_VERSION` (`2026-06-25`, tied to the consumer's legal pages). Supports
   the tabliss account/sync onboarding.
 
-_Track other in-flight work via [issues](https://github.com/dalberola/auth-preferences-service/issues)
-and [milestones](https://github.com/dalberola/auth-preferences-service/milestones)._
+### Fixed
+- **Single `/me` guard**
+  ([#51](https://github.com/dalberola/auth-preferences-service/issues/51)):
+  `apiLimiter` + `requireAuth` are applied once at the `/me` mount instead of per
+  router, so `DELETE /me` no longer double-counts the rate limiter.
 
 ## [1.3.0] - 2026-06-25
 
@@ -152,7 +181,8 @@ Initial dev-ready baseline.
   and a guided AI onboarding flow.
 - CI via GitHub Actions (typecheck + lint + test against a Mongo service).
 
-[Unreleased]: https://github.com/dalberola/auth-preferences-service/compare/v1.3.0...HEAD
+[Unreleased]: https://github.com/dalberola/auth-preferences-service/compare/v1.4.0...HEAD
+[1.4.0]: https://github.com/dalberola/auth-preferences-service/compare/v1.3.0...v1.4.0
 [1.3.0]: https://github.com/dalberola/auth-preferences-service/compare/v1.2.0...v1.3.0
 [1.2.0]: https://github.com/dalberola/auth-preferences-service/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/dalberola/auth-preferences-service/compare/v1.0.0...v1.1.0
