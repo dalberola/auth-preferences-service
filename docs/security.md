@@ -98,6 +98,18 @@ and verification tokens in one transaction, so no orphaned tokens remain:
   `lastActiveAt` is refreshed on login **and** refresh; see
   [data-model.md](data-model.md).
 
+## Bot protection (CAPTCHA)
+`register` and `forgot-password` verify a **reCAPTCHA v3** token (`lib/recaptcha.ts`)
+before the handler runs, deterring automated account creation and reset-flooding on
+top of the per-IP limiter and per-account lockout. **Disabled by default** — it is a
+no-op until `RECAPTCHA_SECRET` is set, at which point the client must send a
+`captchaToken` (actions `register` / `forgot_password`) that is checked against the
+provider's siteverify and rejected below `RECAPTCHA_MIN_SCORE` (default 0.5) with
+`400 CAPTCHA_FAILED`. **Posture**: a definitive negative (missing/invalid token,
+action mismatch, low score) fails **closed**, but an infrastructure error (timeout,
+non-200) fails **open** — the check is supplementary, so a provider outage must not
+take down registration. Token grant happens on the client; this service only verifies.
+
 ## Input validation
 Every request body/query is parsed with a Zod schema at the controller boundary;
 failures become `400 VALIDATION_ERROR`. The preferences schema is `strict` —
@@ -105,10 +117,11 @@ unknown keys are rejected.
 
 ## Production hardening
 Several controls above are in code: per-account lockout, the per-IP limiter, the
-production image, migrations-based schema, configurable `TRUST_PROXY`, and
-`SMTP_SECURE`. The remaining items are operator responsibilities (TLS termination,
-secrets in a managed store + rotation, real SMTP with SPF/DKIM/DMARC, CORS for prod
-origins) and a recommended CAPTCHA add-on.
+optional reCAPTCHA on register/forgot-password, the production image,
+migrations-based schema, configurable `TRUST_PROXY`, and `SMTP_SECURE`. The
+remaining items are operator responsibilities (TLS termination, secrets in a managed
+store + rotation, real SMTP with SPF/DKIM/DMARC, CORS for prod origins) plus
+supplying a `RECAPTCHA_SECRET` to switch the CAPTCHA on.
 
 See the **[deployment runbook](deployment.md)** for the full checklist, what is
 implemented vs. operator-owned, and step-by-step guidance — including the

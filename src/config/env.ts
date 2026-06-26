@@ -7,6 +7,11 @@ import { z } from "zod";
 loadEnv({ path: ".env.local" });
 loadEnv({ path: ".env" });
 
+// dotenv turns a bare `KEY=` line into an empty string, which would defeat
+// `.optional()`/`.default()` (and `z.coerce.number("")` is 0, not the default).
+// Normalize "" → undefined so unset-but-present keys fall back cleanly.
+const emptyToUndefined = (v: unknown) => (v === "" ? undefined : v);
+
 const schema = z.object({
   NODE_ENV: z
     .enum(["development", "test", "production"])
@@ -55,6 +60,21 @@ const schema = z.object({
   // How the refresh token reaches the client: httpOnly cookie (same-origin web,
   // default) or the JSON response body (cross-origin / browser-extension clients).
   REFRESH_TOKEN_TRANSPORT: z.enum(["cookie", "body"]).default("cookie"),
+
+  // reCAPTCHA v3 bot protection on register / forgot-password. Verification is
+  // DISABLED while RECAPTCHA_SECRET is unset/blank (the dev/test default), so the
+  // check is a no-op until an operator opts in. When set, the client's token is
+  // checked against the siteverify endpoint and rejected below RECAPTCHA_MIN_SCORE.
+  RECAPTCHA_SECRET: z.preprocess(emptyToUndefined, z.string().min(1).optional()),
+  RECAPTCHA_MIN_SCORE: z.preprocess(
+    emptyToUndefined,
+    z.coerce.number().min(0).max(1).default(0.5),
+  ),
+  // Override only for testing/self-hosted proxies; defaults to Google's endpoint.
+  RECAPTCHA_VERIFY_URL: z.preprocess(
+    emptyToUndefined,
+    z.url().default("https://www.google.com/recaptcha/api/siteverify"),
+  ),
 
   SMTP_HOST: z.string().min(1),
   SMTP_PORT: z.coerce.number().int().positive().default(1025),
