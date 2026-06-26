@@ -71,6 +71,13 @@ kept on purpose, so a replay is still detected as reuse and burns its family
 is independently enforced in application code, so the reaper is hygiene, not
 correctness.
 
+The same reaper tick also enforces the **inactivity policy** (Privacy Policy):
+`users.lastActiveAt` is refreshed on every login **and** token refresh, and
+accounts idle longer than `INACTIVITY_PURGE_MONTHS` (default 12) are deleted with
+their tokens. `INACTIVITY_WARNING_DAYS` (default 30) before the cutoff a warning
+email is sent once, tracked by `users.inactivityWarnedAt` (cleared when the user
+becomes active again).
+
 ## Schema management
 
 `synchronize: true` outside production keeps the schema in sync with the entities

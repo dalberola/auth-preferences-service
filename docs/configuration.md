@@ -35,6 +35,8 @@ docker-compose loads both files, each optional, `.env.local` last.
 | `LOGIN_MAX_ATTEMPTS` | no | `5` | consecutive failed logins before a per-account lock |
 | `LOGIN_LOCK_MINUTES` | no | `15` | how long an account stays locked |
 | `REAP_INTERVAL_MINUTES` | no | `60` | how often the reaper deletes expired tokens |
+| `INACTIVITY_PURGE_MONTHS` | no | `12` | delete accounts idle (no login/refresh) longer than this |
+| `INACTIVITY_WARNING_DAYS` | no | `30` | send a "sign in to keep your account" email this many days before the cutoff |
 | `REFRESH_TOKEN_TRANSPORT` | no | `cookie` | `cookie` (httpOnly cookie) or `body` (JSON body) — see security.md |
 | `SMTP_HOST` | **yes** | — | `mailpit` in compose |
 | `SMTP_PORT` | no | `1025` | Mailpit SMTP port |

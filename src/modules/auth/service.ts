@@ -68,6 +68,7 @@ export async function register(input: RegisterInput): Promise<void> {
         preferences: defaultPreferences(),
         consentVersion,
         consentAt,
+        lastActiveAt: consentAt,
       }),
     );
     await issueVerification(user.id, email);
@@ -168,6 +169,12 @@ export async function login(input: LoginInput): Promise<IssuedTokens> {
     throw forbidden("EMAIL_NOT_VERIFIED", "Email address is not verified");
   }
 
+  // A completed sign-in counts as activity; clear any pending inactivity warning.
+  await users().update(user.id, {
+    lastActiveAt: new Date(),
+    inactivityWarnedAt: null,
+  });
+
   const refresh = await issueRefreshToken(user.id, newId());
   return {
     accessToken: signAccessToken(user.id),
@@ -199,6 +206,12 @@ export async function refresh(rawToken: string): Promise<IssuedTokens> {
   }
 
   const userId = record.userId;
+  // A silent refresh is the primary activity signal for logged-in users, who
+  // rarely re-login; without this, active accounts would be purged as inactive.
+  await users().update(userId, {
+    lastActiveAt: new Date(),
+    inactivityWarnedAt: null,
+  });
   const next = await issueRefreshToken(userId, record.family);
   record.revokedAt = new Date();
   record.replacedByHash = hashToken(next.raw);

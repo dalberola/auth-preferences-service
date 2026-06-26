@@ -6,13 +6,20 @@ import type { Express } from "express";
 import { CONSENT_VERSION } from "../src/modules/auth/consent.js";
 
 // Capture the raw tokens instead of sending real emails.
-const captured = vi.hoisted(() => ({ token: "", resetToken: "" }));
+const captured = vi.hoisted(() => ({
+  token: "",
+  resetToken: "",
+  inactivityWarnings: [] as string[],
+}));
 vi.mock("../src/lib/mailer.js", () => ({
   sendVerificationEmail: vi.fn(async (_to: string, raw: string) => {
     captured.token = raw;
   }),
   sendPasswordResetEmail: vi.fn(async (_to: string, raw: string) => {
     captured.resetToken = raw;
+  }),
+  sendInactivityWarningEmail: vi.fn(async (to: string) => {
+    captured.inactivityWarnings.push(to);
   }),
 }));
 
@@ -497,6 +504,98 @@ describe("token reaper", () => {
     expect(await rt.findOneBy({ id: liveR.id })).not.toBeNull();
     expect(await vt.findOneBy({ id: expiredV.id })).toBeNull();
     expect(await vt.findOneBy({ id: liveV.id })).not.toBeNull();
+  });
+});
+
+describe("inactivity deletion", () => {
+  function monthsAgo(base: Date, n: number): Date {
+    const d = new Date(base);
+    d.setMonth(d.getMonth() - n);
+    return d;
+  }
+
+  it("login and refresh bump lastActiveAt and clear a pending warning", async () => {
+    const { AppDataSource } = await import("../src/db/data-source.js");
+    const { User } = await import("../src/models/user.js");
+    const users = AppDataSource.getRepository(User);
+
+    const addr = "stayactive@example.com";
+    await registerAndVerify(addr);
+
+    // Login records activity.
+    const { refreshToken } = await loginTokens(addr);
+    let row = await users.findOneByOrFail({ email: addr });
+    expect(row.lastActiveAt).not.toBeNull();
+
+    // Mark the account stale + already-warned, then a silent refresh revives it.
+    const old = new Date(Date.now() - 100 * 86_400_000);
+    await users.update({ email: addr }, { lastActiveAt: old, inactivityWarnedAt: old });
+    await sendRefresh(refreshToken).expect(200);
+
+    row = await users.findOneByOrFail({ email: addr });
+    expect(row.inactivityWarnedAt).toBeNull();
+    expect(row.lastActiveAt!.getTime()).toBeGreaterThan(old.getTime());
+  });
+
+  it("purges accounts past the window, warns those approaching it, retains active ones", async () => {
+    const { AppDataSource } = await import("../src/db/data-source.js");
+    const { User, defaultPreferences } = await import("../src/models/user.js");
+    const { RefreshToken } = await import("../src/models/refreshToken.js");
+    const { purgeInactiveAccounts } = await import("../src/db/reaper.js");
+    const users = AppDataSource.getRepository(User);
+    const rts = AppDataSource.getRepository(RefreshToken);
+
+    const now = new Date();
+    const tag = `inact-${Date.now()}`;
+    const mk = (addr: string, last: Date) =>
+      users.save(
+        users.create({
+          email: addr,
+          passwordHash: "x",
+          emailVerified: true,
+          preferences: defaultPreferences(),
+          lastActiveAt: last,
+          inactivityWarnedAt: null,
+        }),
+      );
+
+    // 13 months idle → delete. 12mo+15d idle → inside the 30-day warn window.
+    // Active now → untouched.
+    const stale = await mk(`${tag}-stale@e.com`, monthsAgo(now, 13));
+    const warnDate = monthsAgo(now, 12);
+    warnDate.setDate(warnDate.getDate() + 15);
+    const warn = await mk(`${tag}-warn@e.com`, warnDate);
+    const active = await mk(`${tag}-active@e.com`, now);
+
+    // A token on the stale account proves the cascade.
+    await rts.save(
+      rts.create({
+        userId: stale.id,
+        tokenHash: `${tag}-rt`,
+        family: stale.id,
+        expiresAt: new Date(now.getTime() + 60 * 60_000),
+      }),
+    );
+
+    const res = await purgeInactiveAccounts(now);
+    expect(res.deleted).toBeGreaterThanOrEqual(1);
+    expect(res.warned).toBeGreaterThanOrEqual(1);
+
+    // Stale account and its tokens are gone; active account survives.
+    expect(await users.findOneBy({ id: stale.id })).toBeNull();
+    expect(await rts.countBy({ userId: stale.id })).toBe(0);
+    expect(await users.findOneBy({ id: active.id })).not.toBeNull();
+
+    // Warned account is retained and flagged exactly once.
+    const warnedRow = await users.findOneByOrFail({ id: warn.id });
+    expect(warnedRow.inactivityWarnedAt).not.toBeNull();
+    expect(captured.inactivityWarnings).toContain(`${tag}-warn@e.com`);
+
+    // A second sweep at the same instant does not re-warn (gated by the flag).
+    const before = captured.inactivityWarnings.length;
+    const second = await purgeInactiveAccounts(now);
+    expect(second.warned).toBe(0);
+    expect(captured.inactivityWarnings.length).toBe(before);
   });
 });
 

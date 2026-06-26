@@ -56,6 +56,19 @@ export class User {
   @Column({ type: "datetime", nullable: true })
   consentAt!: Date | null;
 
+  // Last time the account showed activity: set at registration and refreshed on
+  // every login AND token refresh (active users refresh silently far more often
+  // than they re-login). The inactivity reaper purges accounts whose
+  // `lastActiveAt` is older than the configured window.
+  @Column({ type: "datetime", nullable: true })
+  lastActiveAt!: Date | null;
+
+  // When an "about to be deleted for inactivity" warning email was last sent.
+  // Set by the reaper to avoid re-warning every tick; cleared whenever the user
+  // becomes active again, so a later inactivity cycle warns afresh.
+  @Column({ type: "datetime", nullable: true })
+  inactivityWarnedAt!: Date | null;
+
   // JSON column (MariaDB has no embedded-document type). Partial updates are done
   // read-merge-save in the service rather than via column-level writes.
   @Column({ type: "json" })

@@ -37,6 +37,31 @@ export async function sendVerificationEmail(
   logger.info({ to }, "verification email dispatched");
 }
 
+export async function sendInactivityWarningEmail(
+  to: string,
+  daysUntilDeletion: number,
+): Promise<void> {
+  // Signing in (anywhere in the consumer app) refreshes `lastActiveAt` and
+  // cancels the pending deletion.
+  const link = env.CLIENT_URL;
+  await transport.sendMail({
+    from: env.MAIL_FROM,
+    to,
+    subject: "Your account will be deleted soon",
+    text:
+      `Your account has been inactive for a while and is scheduled for ` +
+      `deletion in about ${daysUntilDeletion} days.\n\n` +
+      `Sign in to keep it:\n\n${link}\n\n` +
+      `If you do nothing, your account and synced settings will be permanently deleted.`,
+    html:
+      `<p>Your account has been inactive for a while and is scheduled for ` +
+      `deletion in about ${daysUntilDeletion} days.</p>` +
+      `<p><a href="${link}">Sign in to keep your account</a></p>` +
+      `<p>If you do nothing, your account and synced settings will be permanently deleted.</p>`,
+  });
+  logger.info({ to }, "inactivity warning email dispatched");
+}
+
 export async function sendPasswordResetEmail(
   to: string,
   rawToken: string,
