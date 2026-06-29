@@ -17,3 +17,5 @@ export const unauthorized = (code: string, message: string) =>
   new AppError(401, code, message);
 export const forbidden = (code: string, message: string) =>
   new AppError(403, code, message);
+export const conflict = (code: string, message: string) =>
+  new AppError(409, code, message);

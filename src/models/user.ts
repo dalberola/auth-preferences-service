@@ -15,6 +15,12 @@ export interface Preferences {
   schemaVersion: number;
   // Free-form bag for app-specific settings; validated at the API boundary.
   settings: Record<string, unknown>;
+  // Logical clock for the settings blob: epoch-ms of the edit a client last
+  // wrote. Used for optimistic concurrency — a PUT carrying an older value than
+  // the stored one is rejected (409) so a stale device cannot clobber a newer
+  // device's config. 0 means "never written by a sync-aware client" (legacy /
+  // default record), which any timestamped write supersedes.
+  updatedAt: number;
 }
 
 export const defaultPreferences = (): Preferences => ({
@@ -22,6 +28,7 @@ export const defaultPreferences = (): Preferences => ({
   locale: "en",
   schemaVersion: 1,
   settings: {},
+  updatedAt: 0,
 });
 
 @Entity({ name: "users" })

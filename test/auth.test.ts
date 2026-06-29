@@ -286,6 +286,98 @@ describe("preferences (read-merge-save)", () => {
       settings: { a: 1 },
     });
   });
+
+  it("rejects a stale settings write (older updatedAt) with 409 and keeps the newer config", async () => {
+    const addr = "concurrency@example.com";
+    await registerAndVerify(addr);
+    const { accessToken } = await loginTokens(addr);
+    const bearer = `Bearer ${accessToken}`;
+
+    // Device A writes at t=2000.
+    const written = await request(app)
+      .put("/me/preferences")
+      .set("Authorization", bearer)
+      .send({ settings: { v: "A" }, updatedAt: 2000 })
+      .expect(200);
+    expect(written.body.preferences).toMatchObject({
+      settings: { v: "A" },
+      updatedAt: 2000,
+    });
+
+    // Device B (stale, t=1000) must not clobber A's newer config.
+    const conflict = await request(app)
+      .put("/me/preferences")
+      .set("Authorization", bearer)
+      .send({ settings: { v: "B" }, updatedAt: 1000 })
+      .expect(409);
+    expect(conflict.body.error.code).toBe("PREFERENCES_CONFLICT");
+
+    const fetched = await request(app)
+      .get("/me/preferences")
+      .set("Authorization", bearer)
+      .expect(200);
+    expect(fetched.body.preferences).toMatchObject({
+      settings: { v: "A" },
+      updatedAt: 2000,
+    });
+  });
+
+  it("accepts an equal-or-newer updatedAt and advances the clock", async () => {
+    const addr = "concurrency-newer@example.com";
+    await registerAndVerify(addr);
+    const { accessToken } = await loginTokens(addr);
+    const bearer = `Bearer ${accessToken}`;
+
+    await request(app)
+      .put("/me/preferences")
+      .set("Authorization", bearer)
+      .send({ settings: { v: "A" }, updatedAt: 1000 })
+      .expect(200);
+
+    // Idempotent re-push at the same clock is allowed.
+    await request(app)
+      .put("/me/preferences")
+      .set("Authorization", bearer)
+      .send({ settings: { v: "A" }, updatedAt: 1000 })
+      .expect(200);
+
+    // A strictly newer write wins.
+    const newer = await request(app)
+      .put("/me/preferences")
+      .set("Authorization", bearer)
+      .send({ settings: { v: "C" }, updatedAt: 3000 })
+      .expect(200);
+    expect(newer.body.preferences).toMatchObject({
+      settings: { v: "C" },
+      updatedAt: 3000,
+    });
+  });
+
+  it("leaves the clock untouched for writes that omit updatedAt", async () => {
+    const addr = "concurrency-legacy@example.com";
+    await registerAndVerify(addr);
+    const { accessToken } = await loginTokens(addr);
+    const bearer = `Bearer ${accessToken}`;
+
+    await request(app)
+      .put("/me/preferences")
+      .set("Authorization", bearer)
+      .send({ settings: { v: "A" }, updatedAt: 5000 })
+      .expect(200);
+
+    // A theme-only write (no updatedAt) is a pre-sync/partial update: it neither
+    // conflicts nor moves the settings clock.
+    const themed = await request(app)
+      .put("/me/preferences")
+      .set("Authorization", bearer)
+      .send({ theme: "light" })
+      .expect(200);
+    expect(themed.body.preferences).toMatchObject({
+      theme: "light",
+      settings: { v: "A" },
+      updatedAt: 5000,
+    });
+  });
 });
 
 describe("consent recording", () => {
