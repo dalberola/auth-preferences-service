@@ -23,11 +23,19 @@ opaque strings — the API contract is unchanged from the MongoDB era.
 | `locale` | string | `"en"` |
 | `schemaVersion` | number | `1` (bump when the shape changes) |
 | `settings` | object | `{}` — free-form, app-owned bag; validated at the API edge |
+| `updatedAt` | number | `0` — settings-blob clock (epoch-ms); optimistic-concurrency token |
 
 A single `json` column (MariaDB has no embedded-document type). Partial updates
 are **read-merge-save** in `preferences/service.ts` — the whole object is rewritten,
 which is fine at this scale. The default object is set in code on insert
 (`defaultPreferences()`), not via a column default.
+
+`updatedAt` lives **inside** the JSON blob, so adding it needs no migration. It is
+the edit time a client stamps when writing `settings`; `PUT` refuses a value older
+than the stored one with `409 PREFERENCES_CONFLICT` (optimistic concurrency), which
+is how two devices sharing an account avoid silently clobbering each other —
+last-writer-by-edit-time wins. Existing rows predating this field read as `0` and are
+superseded by the first timestamped write.
 
 ## `verification_tokens`
 

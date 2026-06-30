@@ -117,7 +117,11 @@ the user's refresh tokens** (every existing session must re-authenticate).
 
 ## `GET /me/preferences`  *(auth required)*
 
-→ `200 { "preferences": { "theme": "system", "locale": "en", "schemaVersion": 1, "settings": {} } }`
+→ `200 { "preferences": { "theme": "system", "locale": "en", "schemaVersion": 1, "settings": {}, "updatedAt": 0 } }`
+
+`updatedAt` is the settings-blob clock (epoch-ms of the edit a client last wrote);
+`0` for a record never written by a sync-aware client. Pull it and echo it back on
+the next write to take part in conflict detection (below).
 
 ```bash
 curl -s localhost:4000/me/preferences -H "authorization: Bearer $ACCESS"
@@ -129,15 +133,20 @@ Partial update — only supplied keys change. Unknown top-level keys are rejecte
 (`strict` schema).
 
 ```json
-{ "theme": "dark", "locale": "en", "settings": { "anyKey": "anyJsonValue" } }
+{ "theme": "dark", "locale": "en", "settings": { "anyKey": "anyJsonValue" }, "updatedAt": 1751200000000 }
 ```
 
 → `200 { "preferences": { … } }`
+→ `409 PREFERENCES_CONFLICT` if `updatedAt` is **older** than the stored value —
+the stored config is newer, so the write is refused to prevent a stale device from
+clobbering it. The client resolves this by re-pulling and re-applying its change
+(last-writer-by-edit-time wins). Writes that **omit** `updatedAt` skip the check and
+leave the clock untouched (theme/locale-only or pre-sync clients).
 
 ```bash
 curl -sX PUT localhost:4000/me/preferences \
   -H "authorization: Bearer $ACCESS" -H 'content-type: application/json' \
-  -d '{"theme":"dark","settings":{"widgetA":true}}'
+  -d '{"theme":"dark","settings":{"widgetA":true},"updatedAt":1751200000000}'
 ```
 
 ## `DELETE /me`  *(auth required)*

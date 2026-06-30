@@ -41,7 +41,7 @@ emails are caught by Mailpit — open the UI and click the link (or use `/mailpi
 | POST | `/auth/logout` | refresh cookie | → 204 |
 | POST | `/auth/resend-verification` | – | `{ email }` → 202 |
 | GET | `/me/preferences` | Bearer | → `{ preferences }` |
-| PUT | `/me/preferences` | Bearer | `{ theme?, locale?, settings? }` → `{ preferences }` |
+| PUT | `/me/preferences` | Bearer | `{ theme?, locale?, settings?, updatedAt? }` → `{ preferences }` / `409` if stale |
 
 Full reference with curl examples and error codes: [docs/api.md](docs/api.md).
 

@@ -9,6 +9,18 @@ All notable changes to this project are documented here. Format loosely follows
 _Track in-flight work via [issues](https://github.com/dalberola/auth-preferences-service/issues)
 and [milestones](https://github.com/dalberola/auth-preferences-service/milestones)._
 
+### Added
+- **Optimistic concurrency for `/me/preferences`.** The preferences blob carries a
+  new `updatedAt` clock (epoch-ms of the edit a client last wrote). `PUT` now
+  rejects a write whose `updatedAt` is **older** than the stored value with
+  `409 PREFERENCES_CONFLICT`, so two devices sharing an account can no longer
+  silently clobber each other — last-writer-by-edit-time wins, and the loser
+  re-pulls. Writes that omit `updatedAt` (theme/locale-only, or pre-sync clients)
+  skip the check and leave the clock untouched. The field lives inside the existing
+  `preferences` JSON column, so **no migration is required**; legacy rows read as
+  `0` and are superseded by the first timestamped write. See `docs/api.md` and
+  `docs/data-model.md`.
+
 ## [1.4.0] - 2026-06-26
 
 Production-launch milestone — the service is live at
